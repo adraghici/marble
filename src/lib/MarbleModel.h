@@ -118,6 +118,9 @@ class MARBLE_EXPORT MarbleModel : public QObject
     GeoDataTreeModel *treeModel();
     const GeoDataTreeModel *treeModel() const;
 
+    QAbstractItemModel *groundOverlayModel();
+    const QAbstractItemModel *groundOverlayModel() const;
+
     QAbstractItemModel *placemarkModel();
     const QAbstractItemModel *placemarkModel() const;
 
@@ -320,12 +323,12 @@ class MARBLE_EXPORT MarbleModel : public QObject
      * @see setTrackedPlacemark(), trackedPlacemark()
      */
     void trackedPlacemarkChanged( const GeoDataPlacemark *placemark );
- 
+
     /** @brief Emitted when the home location is changed
      * @see home(), setHome()
      */
     void homeChanged( const GeoDataCoordinates newHomePoint );
-    
+
  private:
     Q_DISABLE_COPY( MarbleModel )
 
