@@ -21,6 +21,9 @@
 #include "GeoDataCoordinates.h"
 #include "ViewportParams.h"
 
+// Maximum amount of nodes that are created automatically between actual nodes.
+static const int maxTessellationNodes = 200;
+
 namespace Marble {
 
 CylindricalProjection::CylindricalProjection()
@@ -38,7 +41,8 @@ CylindricalProjection::~CylindricalProjection()
 }
 
 CylindricalProjectionPrivate::CylindricalProjectionPrivate( CylindricalProjection * parent )
-        : AbstractProjectionPrivate( parent )
+        : AbstractProjectionPrivate( parent ),
+          q_ptr( parent )
 {
 
 }
@@ -88,16 +92,182 @@ bool CylindricalProjection::screenCoordinates( const GeoDataLineString &lineStri
     }
 
     QVector<QPolygonF *> subPolygons;
-    if( lineString.isClosed() ) {
-        GeoDataLinearRing ring = lineString.toRangeCorrected();
-        d->lineStringToPolygon( ring, viewport, subPolygons );
-    } else {
-        GeoDataLineString string = lineString.toRangeCorrected();
-        d->lineStringToPolygon( string, viewport, subPolygons );
-    }
+    d->lineStringToPolygon( lineString, viewport, subPolygons );
 
     polygons << subPolygons;
     return polygons.isEmpty();
+}
+int CylindricalProjectionPrivate::tessellateLineSegment( const GeoDataCoordinates &aCoords,
+                                                qreal ax, qreal ay,
+                                                const GeoDataCoordinates &bCoords,
+                                                qreal bx, qreal by,
+                                                QVector<QPolygonF*> &polygons,
+                                                const ViewportParams *viewport,
+                                                TessellationFlags f,
+                                                int mirrorCount,
+                                                qreal repeatDistance) const
+{
+    // We take the manhattan length as a distance approximation
+    // that can be too big by a factor of sqrt(2)
+    qreal distance = fabs((bx - ax)) + fabs((by - ay));
+#ifdef SAFE_DISTANCE
+    // Interpolate additional nodes if the line segment that connects the
+    // current or previous nodes might cross the viewport.
+    // The latter can pretty safely be excluded for most projections if both points
+    // are located on the same side relative to the viewport boundaries and if they are
+    // located more than half the line segment distance away from the viewport.
+    const qreal safeDistance = - 0.5 * distance;
+    if (   !( bx < safeDistance && ax < safeDistance )
+        || !( by < safeDistance && ay < safeDistance )
+        || !( bx + safeDistance > viewport->width()
+            && ax + safeDistance > viewport->width() )
+        || !( by + safeDistance > viewport->height()
+            && ay + safeDistance > viewport->height() )
+    )
+    {
+#endif
+        bool const smallScreen = MarbleGlobal::getInstance()->profiles() & MarbleGlobal::SmallScreen;
+        int const finalTessellationPrecision = smallScreen ? 3 * tessellationPrecision : tessellationPrecision;
+
+        int tessellatedNodes = (int)( distance / finalTessellationPrecision );
+
+        // Let the line segment follow the spherical surface
+        // if the distance between the previous point and the current point
+        // on screen is too big
+        if ( distance > finalTessellationPrecision ) {
+
+            mirrorCount = processTessellation( aCoords, bCoords,
+                                 tessellatedNodes,
+                                 polygons,
+                                 viewport,
+                                 f,
+                                 mirrorCount,
+                                 repeatDistance );
+        }
+        else {
+            mirrorCount = crossDateLine( aCoords, bCoords, bx, by, polygons, mirrorCount, repeatDistance );
+        }
+#ifdef SAFE_DISTANCE
+    }
+#endif
+    return mirrorCount;
+}
+
+
+int CylindricalProjectionPrivate::processTessellation( const GeoDataCoordinates &previousCoords,
+                                                    const GeoDataCoordinates &currentCoords,
+                                                    int tessellatedNodes,
+                                                    QVector<QPolygonF*> &polygons,
+                                                    const ViewportParams *viewport,
+                                                    TessellationFlags f,
+                                                    int mirrorCount,
+                                                    qreal repeatDistance) const
+{
+
+    const bool clampToGround = f.testFlag( FollowGround );
+    const bool followLatitudeCircle = f.testFlag( RespectLatitudeCircle )
+                                      && previousCoords.latitude() == currentCoords.latitude();
+
+    // Maximum amount of tessellation nodes.
+    if ( tessellatedNodes > maxTessellationNodes ) tessellatedNodes = maxTessellationNodes;
+
+    // Calculate steps for tessellation: lonDiff and altDiff
+    qreal lonDiff = 0.0;
+    if ( followLatitudeCircle ) {
+        const int previousSign = previousCoords.longitude() > 0 ? 1 : -1;
+        const int currentSign = currentCoords.longitude() > 0 ? 1 : -1;
+
+        lonDiff = currentCoords.longitude() - previousCoords.longitude();
+        if ( previousSign != currentSign
+             && fabs(previousCoords.longitude()) + fabs(currentCoords.longitude()) > M_PI ) {
+            if ( previousSign > currentSign ) {
+                // going eastwards ->
+                lonDiff += 2 * M_PI ;
+            } else {
+                // going westwards ->
+                lonDiff -= 2 * M_PI;
+            }
+        }
+        if ( fabs( lonDiff ) == 2 * M_PI ) {
+            return mirrorCount;
+        }
+    }
+
+    const qreal altDiff = currentCoords.altitude() - previousCoords.altitude();
+
+    // Create the tessellation nodes.
+    GeoDataCoordinates previousTessellatedCoords = previousCoords;
+    for ( int i = 1; i <= tessellatedNodes - 2; ++i ) {
+        const qreal t = (qreal)(i) / (qreal)( tessellatedNodes );
+
+        // interpolate the altitude, too
+        const qreal altitude = clampToGround ? 0 : altDiff * t + previousCoords.altitude();
+
+        qreal lon = 0.0;
+        qreal lat = 0.0;
+        if ( followLatitudeCircle ) {
+            // To tessellate along latitude circles use the
+            // linear interpolation of the longitude.
+            lon = lonDiff * t + previousCoords.longitude();
+            lat = previousTessellatedCoords.latitude();
+        }
+        else {
+            // To tessellate along great circles use the
+            // normalized linear interpolation ("NLERP") for latitude and longitude.
+            const Quaternion itpos = Quaternion::nlerp( previousCoords.quaternion(), currentCoords.quaternion(), t );
+            itpos. getSpherical( lon, lat );
+        }
+
+        const GeoDataCoordinates currentTessellatedCoords( lon, lat, altitude );
+        Q_Q(const CylindricalProjection);
+        qreal bx, by;
+        q->screenCoordinates( currentTessellatedCoords, viewport, bx, by );
+        mirrorCount = crossDateLine( previousTessellatedCoords, currentTessellatedCoords, bx, by, polygons,
+                                     mirrorCount, repeatDistance );
+        previousTessellatedCoords = currentTessellatedCoords;
+    }
+
+    // For the clampToGround case add the "current" coordinate after adding all other nodes.
+    GeoDataCoordinates currentModifiedCoords( currentCoords );
+    if ( clampToGround ) {
+        currentModifiedCoords.setAltitude( 0.0 );
+    }
+    Q_Q(const CylindricalProjection);
+    qreal bx, by;
+    q->screenCoordinates( currentModifiedCoords, viewport, bx, by );
+    mirrorCount = crossDateLine( previousTessellatedCoords, currentModifiedCoords, bx, by, polygons,
+                                 mirrorCount, repeatDistance );
+    return mirrorCount;
+}
+
+int CylindricalProjectionPrivate::crossDateLine( const GeoDataCoordinates & aCoord,
+                                                 const GeoDataCoordinates & bCoord,
+                                                 qreal bx,
+                                                 qreal by,
+                                                 QVector<QPolygonF*> &polygons,
+                                                 int mirrorCount,
+                                                 qreal repeatDistance ) const
+{
+    qreal aLon = aCoord.longitude();
+    qreal aSign = aLon > 0 ? 1 : -1;
+
+    qreal bLon = bCoord.longitude();
+    qreal bSign = bLon > 0 ? 1 : -1;
+
+    Q_Q( const AbstractProjection );
+
+    int sign = 0;
+    qreal delta = 0;
+    if( aSign != bSign
+            && fabs(aLon) + fabs(bLon) > M_PI
+            && q->repeatX() ) {
+        sign = aSign > bSign ? 1 : -1;
+        mirrorCount += sign;
+    }
+    delta = repeatDistance * mirrorCount;
+    *polygons.last() << QPointF( bx + delta, by );
+
+    return mirrorCount;
 }
 
 bool CylindricalProjectionPrivate::lineStringToPolygon( const GeoDataLineString &lineString,
@@ -175,7 +345,7 @@ bool CylindricalProjectionPrivate::lineStringToPolygon( const GeoDataLineString 
                 // special case for polys which cross dateline but have no Tesselation Flag
                 // the expected rendering is a screen coordinates straight line between
                 // points, but in projections with repeatX things are not smooth
-                mirrorCount = crossDateLine( *itPreviousCoords, *itCoords, polygons, viewport, mirrorCount, distance );
+                mirrorCount = crossDateLine( *itPreviousCoords, *itCoords, x, y, polygons, mirrorCount, distance );
             }
 
             itPreviousCoords = itCoords;
@@ -300,6 +470,23 @@ void CylindricalProjectionPrivate::repeatPolygons( const ViewportParams *viewpor
 
     // mDebug() << Q_FUNC_INFO << "Coordinates: " << xWest << xEast
     //          << "Repeats: " << repeatsLeft << repeatsRight;
+}
+
+qreal CylindricalProjectionPrivate::repeatDistance( const ViewportParams *viewport ) const
+{
+    // Choose a latitude that is inside the viewport.
+    qreal centerLatitude = viewport->viewLatLonAltBox().center().latitude();
+
+    GeoDataCoordinates westCoords( -M_PI, centerLatitude );
+    GeoDataCoordinates eastCoords( +M_PI, centerLatitude );
+    qreal xWest, xEast, dummyY;
+
+    Q_Q( const AbstractProjection );
+
+    q->screenCoordinates( westCoords, viewport, xWest, dummyY );
+    q->screenCoordinates( eastCoords, viewport, xEast, dummyY );
+
+    return   xEast - xWest;
 }
 
 }
