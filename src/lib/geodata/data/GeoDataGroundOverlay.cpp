@@ -50,7 +50,7 @@ GeoDataGroundOverlay &GeoDataGroundOverlay::operator=( const GeoDataGroundOverla
     return *this;
 }
 
-bool GeoDataGroundOverlay::operator<( const GeoDataGroundOverlay &other )
+bool GeoDataGroundOverlay::operator<( const GeoDataGroundOverlay &other ) const
 {
     return drawOrder() < other.drawOrder();
 }

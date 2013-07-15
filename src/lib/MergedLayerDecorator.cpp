@@ -66,8 +66,7 @@ public:
     const SunLocator *const m_sunLocator;
     BlendingFactory m_blendingFactory;
     QVector<const GeoSceneTextureTile *> m_textureLayers;
-    QList<const GeoDataGroundOverlay *> *m_groundOverlays;
-    QList<QImage> m_groundOverlaysImages;
+    QList<QPair<const GeoDataGroundOverlay *, QImage> > m_groundOverlays;
     int m_maxTileLevel;
     QString m_themeId;
     int m_levelZeroColumns;
@@ -120,7 +119,7 @@ void MergedLayerDecorator::setTextureLayers( const QVector<const GeoSceneTexture
     d->detectMaxTileLevel();
 }
 
-void MergedLayerDecorator::setGroundOverlays( QList<const GeoDataGroundOverlay *> *groundOverlays )
+void MergedLayerDecorator::setGroundOverlays(const QList<QPair<const GeoDataGroundOverlay *, QImage> > &groundOverlays )
 {
     d->m_groundOverlays = groundOverlays;
 }
@@ -180,7 +179,7 @@ StackedTile *MergedLayerDecorator::Private::createTile( const QVector<QSharedPoi
 
     // if there are more than one active texture layers, we have to convert the
     // result tile into QImage::Format_ARGB32_Premultiplied to make blending possible
-    const bool withConversion = tiles.count() > 1 || m_showSunShading || m_showTileId || m_groundOverlays->size() > 0;
+    const bool withConversion = tiles.count() > 1 || m_showSunShading || m_showTileId || !m_groundOverlays.isEmpty();
     foreach ( const QSharedPointer<TextureTile> &tile, tiles ) {
 
         // Image blending. If there are several images in the same tile (like clouds
@@ -262,12 +261,12 @@ void MergedLayerDecorator::Private::renderGroundOverlays( QImage *tileImage, con
          for ( int x = 0; x < tileImage->width(); ++x, ++scanLine ) {
              qreal lon = lonLeft + ( (qreal) x / (qreal) tileImage->width() * imgLonDiff );
 
-             for ( int i = m_groundOverlays->size() - 1; i >= 0; --i ) {
+             for ( int i = m_groundOverlays.size() - 1; i >= 0; --i ) {
 
-                 const GeoDataGroundOverlay* overlay = m_groundOverlays->at( i );
+                 const GeoDataGroundOverlay* overlay = m_groundOverlays.at( i ).first;
 
-                 const int overlayHeight = m_groundOverlaysImages.at( i ).height();
-                 const int overlayWidth = m_groundOverlaysImages.at( i ).width();
+                 const int overlayHeight = m_groundOverlays.at( i ).second.height();
+                 const int overlayWidth = m_groundOverlays.at( i ).second.width();
 
                  /* Overlay position */
                  const qreal latNorth = overlay->latLonBox().north( GeoDataCoordinates::Degree );
@@ -291,7 +290,7 @@ void MergedLayerDecorator::Private::renderGroundOverlays( QImage *tileImage, con
                      int py = overlayHeight - (int) ( ( latR - latSouth ) / latDiff * overlayHeight ) - 1;
 
                      if ( px < overlayWidth && py < overlayHeight ) {
-                         *scanLine = m_groundOverlaysImages.at( i ).pixel( px, py );
+                         *scanLine = m_groundOverlays.at( i ).second.pixel( px, py );
                          break;
                      }
                  }
@@ -536,15 +535,6 @@ void MergedLayerDecorator::Private::detectMaxTileLevel()
     }
 
     m_maxTileLevel = TileLoader::maximumTileLevel( *m_textureLayers.at( 0 ) );
-}
-
-void MergedLayerDecorator::updateGroundOverlaysImages()
-{
-    d->m_groundOverlaysImages.clear();
-
-    for ( int i = 0; i < d->m_groundOverlays->size(); ++i ) {
-        d->m_groundOverlaysImages.append( QImage ( d->m_groundOverlays->at( i )->absoluteIconFile() ) );
-    }
 }
 
 QVector<const GeoSceneTextureTile *> MergedLayerDecorator::Private::findRelevantTextureLayers( const TileId &stackedTileId ) const

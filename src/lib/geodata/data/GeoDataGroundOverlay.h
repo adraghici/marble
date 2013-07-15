@@ -30,7 +30,7 @@ public:
 
     GeoDataGroundOverlay& operator=( const GeoDataGroundOverlay &other );
 
-    bool operator<( const GeoDataGroundOverlay &other );
+    bool operator<( const GeoDataGroundOverlay &other ) const;
 
     ~GeoDataGroundOverlay();
 

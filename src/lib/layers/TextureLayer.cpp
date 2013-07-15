@@ -75,7 +75,7 @@ public:
     const GeoSceneGroup *m_textureLayerSettings;
     QString m_runtimeTrace;
     QSortFilterProxyModel m_groundOverlayModel;
-    QList<const GeoDataGroundOverlay *> m_groundOverlayCache;
+    QList<QPair<const GeoDataGroundOverlay *, QImage> > m_groundOverlayCache;
     // For scheduling repaints
     QTimer           m_repaintTimer;
 };
@@ -104,19 +104,19 @@ TextureLayer::Private::Private( HttpDownloadManager *downloadManager,
     m_groundOverlayModel.setSortRole ( MarblePlacemarkModel::PopularityIndexRole );
     m_groundOverlayModel.sort (0, Qt::AscendingOrder );
 
-    connect( &m_groundOverlayModel, SIGNAL( rowsInserted( QModelIndex, int, int ) ),
-             m_parent,              SLOT  ( addGroundOverlays( QModelIndex, int, int ) ) );
+    connect( &m_groundOverlayModel, SIGNAL(rowsInserted(QModelIndex,int,int),
+             m_parent,              SLOT(addGroundOverlays(QModelIndex,int,int) );
 
-    connect( &m_groundOverlayModel, SIGNAL( rowsAboutToBeRemoved( QModelIndex, int, int ) ),
-             m_parent,              SLOT  ( removeGroundOverlays( QModelIndex, int, int ) ) );
+    connect( &m_groundOverlayModel, SIGNAL(rowsAboutToBeRemoved(QModelIndex,int,int)),
+             m_parent,              SLOT(removeGroundOverlays(QModelIndex,int,int)) );
 
-    connect( &m_groundOverlayModel, SIGNAL( dataChanged( QModelIndex, QModelIndex ) ),
-             m_parent,              SLOT  ( resetGroundOverlaysCache() ) );
+    connect( &m_groundOverlayModel, SIGNAL(dataChanged(QModelIndex,QModelIndex)),
+             m_parent,              SLOT(resetGroundOverlaysCache()) );
 
-    connect( &m_groundOverlayModel, SIGNAL( modelReset() ),
-             m_parent,              SLOT  ( resetGroundOverlaysCache() ) );
+    connect( &m_groundOverlayModel, SIGNAL(modelReset()),
+             m_parent,              SLOT(resetGroundOverlaysCache()) );
 
-    m_layerDecorator.setGroundOverlays( &m_groundOverlayCache );
+    m_layerDecorator.setGroundOverlays( m_groundOverlayCache );
 }
 
 void TextureLayer::Private::requestDelayedRepaint()
@@ -169,11 +169,13 @@ void TextureLayer::Private::addGroundOverlays( QModelIndex parent, int first, in
     for ( int i = first; i <= last; ++i ) {
         QModelIndex index = m_groundOverlayModel.index( i, 0, parent );
         const GeoDataGroundOverlay *overlay = static_cast<GeoDataGroundOverlay *>(qvariant_cast<GeoDataObject *>( index.data( MarblePlacemarkModel::ObjectPointerRole ) ) );
-        m_groundOverlayCache.append( overlay );
+
+        int pos = 0;
+        for ( ; pos < m_groundOverlayCache.size() && *( m_groundOverlayCache.at( pos ).first ) < *overlay; ++pos ) ;
+        m_groundOverlayCache.insert( pos, qMakePair( overlay, QImage( overlay->absoluteIconFile() ) ) );
     }
 
-    qStableSort( m_groundOverlayCache.begin(), m_groundOverlayCache.end() );
-    m_layerDecorator.updateGroundOverlaysImages();
+    m_layerDecorator.setGroundOverlays( m_groundOverlayCache );
 
     m_parent->reset();
 }
@@ -183,11 +185,15 @@ void TextureLayer::Private::removeGroundOverlays( QModelIndex parent, int first,
     for ( int i = first; i <= last; ++i ) {
         QModelIndex index = m_groundOverlayModel.index( i, 0, parent );
         const GeoDataGroundOverlay *overlay = static_cast<GeoDataGroundOverlay *>(qvariant_cast<GeoDataObject *>( index.data( MarblePlacemarkModel::ObjectPointerRole ) ) );
-        m_groundOverlayCache.removeAll( overlay );
+
+        for ( int j = 0; j < m_groundOverlayCache.size(); ++j ) {
+            if ( overlay == m_groundOverlayCache.at( j ).first ) {
+                m_groundOverlayCache.removeAt( j );
+            }
+        }
     }
 
-    qStableSort( m_groundOverlayCache.begin(), m_groundOverlayCache.end() );
-    m_layerDecorator.updateGroundOverlaysImages();
+    m_layerDecorator.setGroundOverlays( m_groundOverlayCache );
 
     m_parent->reset();
 }
@@ -196,7 +202,7 @@ void TextureLayer::Private::resetGroundOverlaysCache()
 {
     m_groundOverlayCache.clear();
 
-    m_layerDecorator.updateGroundOverlaysImages();
+    m_layerDecorator.setGroundOverlays( m_groundOverlayCache );
 
     m_parent->reset();
 }
