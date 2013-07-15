@@ -376,12 +376,11 @@ void SphericalProjectionPrivate::tessellateLineSegment( const GeoDataCoordinates
         bool const smallScreen = MarbleGlobal::getInstance()->profiles() & MarbleGlobal::SmallScreen;
         int const finalTessellationPrecision = smallScreen ? 3 * tessellationPrecision : tessellationPrecision;
 
-        int tessellatedNodes = (int)( distance / finalTessellationPrecision );
-
         // Let the line segment follow the spherical surface
         // if the distance between the previous point and the current point
         // on screen is too big
         if ( distance > finalTessellationPrecision ) {
+            const int tessellatedNodes = qMin<int>( distance / finalTessellationPrecision, maxTessellationNodes );
 
             processTessellation( aCoords, bCoords,
                                  tessellatedNodes,
@@ -410,9 +409,6 @@ void SphericalProjectionPrivate::processTessellation( const GeoDataCoordinates &
     const bool followLatitudeCircle = f.testFlag( RespectLatitudeCircle )
                                       && previousCoords.latitude() == currentCoords.latitude();
 
-    // Maximum amount of tessellation nodes.
-    if ( tessellatedNodes > maxTessellationNodes ) tessellatedNodes = maxTessellationNodes;
-
     // Calculate steps for tessellation: lonDiff and altDiff
     qreal lonDiff = 0.0;
     if ( followLatitudeCircle ) {
@@ -436,8 +432,8 @@ void SphericalProjectionPrivate::processTessellation( const GeoDataCoordinates &
 
     // Create the tessellation nodes.
     GeoDataCoordinates previousTessellatedCoords = previousCoords;
-    for ( int i = 1; i <= tessellatedNodes - 2; ++i ) {
-        const qreal t = (qreal)(i) / (qreal)( tessellatedNodes );
+    for ( int i = 1; i <= tessellatedNodes; ++i ) {
+        const qreal t = (qreal)(i) / (qreal)( tessellatedNodes + 1 );
 
         // interpolate the altitude, too
         const qreal altitude = clampToGround ? 0 : altDiff * t + previousCoords.altitude();
