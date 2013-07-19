@@ -44,7 +44,7 @@ class MergedLayerDecorator
     virtual ~MergedLayerDecorator();
 
     void setTextureLayers( const QVector<const GeoSceneTextureTile *> &textureLayers );
-    void setGroundOverlays( const QList<QPair<const GeoDataGroundOverlay *, QImage> > &groundOverlays );
+    void setGroundOverlays( const QList<const GeoDataGroundOverlay *> &groundOverlays );
 
     int textureLayersSize() const;
 

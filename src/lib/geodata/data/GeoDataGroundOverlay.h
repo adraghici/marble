@@ -30,8 +30,6 @@ public:
 
     GeoDataGroundOverlay& operator=( const GeoDataGroundOverlay &other );
 
-    bool operator<( const GeoDataGroundOverlay &other ) const;
-
     ~GeoDataGroundOverlay();
 
     /** Provides type information for downcasting a GeoNode */
@@ -60,5 +58,7 @@ private:
 };
 
 }
+
+Q_DECLARE_METATYPE( Marble::GeoDataGroundOverlay* )
 
 #endif

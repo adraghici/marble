@@ -66,7 +66,7 @@ public:
     const SunLocator *const m_sunLocator;
     BlendingFactory m_blendingFactory;
     QVector<const GeoSceneTextureTile *> m_textureLayers;
-    QList<QPair<const GeoDataGroundOverlay *, QImage> > m_groundOverlays;
+    QList<const GeoDataGroundOverlay *> m_groundOverlays;
     int m_maxTileLevel;
     QString m_themeId;
     int m_levelZeroColumns;
@@ -119,7 +119,7 @@ void MergedLayerDecorator::setTextureLayers( const QVector<const GeoSceneTexture
     d->detectMaxTileLevel();
 }
 
-void MergedLayerDecorator::setGroundOverlays(const QList<QPair<const GeoDataGroundOverlay *, QImage> > &groundOverlays )
+void MergedLayerDecorator::setGroundOverlays(const QList<const GeoDataGroundOverlay *> &groundOverlays )
 {
     d->m_groundOverlays = groundOverlays;
 }
@@ -263,10 +263,10 @@ void MergedLayerDecorator::Private::renderGroundOverlays( QImage *tileImage, con
 
              for ( int i = m_groundOverlays.size() - 1; i >= 0; --i ) {
 
-                 const GeoDataGroundOverlay* overlay = m_groundOverlays.at( i ).first;
+                 const GeoDataGroundOverlay* overlay = m_groundOverlays.at( i );
 
-                 const int overlayHeight = m_groundOverlays.at( i ).second.height();
-                 const int overlayWidth = m_groundOverlays.at( i ).second.width();
+                 const int overlayHeight = overlay->icon().height();
+                 const int overlayWidth = overlay->icon().width();
 
                  /* Overlay position */
                  const qreal latNorth = overlay->latLonBox().north( GeoDataCoordinates::Degree );
@@ -290,7 +290,7 @@ void MergedLayerDecorator::Private::renderGroundOverlays( QImage *tileImage, con
                      int py = overlayHeight - (int) ( ( latR - latSouth ) / latDiff * overlayHeight ) - 1;
 
                      if ( px < overlayWidth && py < overlayHeight ) {
-                         *scanLine = m_groundOverlays.at( i ).second.pixel( px, py );
+                         *scanLine = overlay->icon().pixel( px, py );
                          break;
                      }
                  }

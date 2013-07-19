@@ -60,6 +60,8 @@ public:
     void removeGroundOverlays( QModelIndex parent, int first, int last );
     void resetGroundOverlaysCache();
 
+    static bool drawOrderLessThan( const GeoDataGroundOverlay* o1, const GeoDataGroundOverlay* o2 );
+
 public:
     TextureLayer  *const m_parent;
     const SunLocator *const m_sunLocator;
@@ -75,7 +77,7 @@ public:
     const GeoSceneGroup *m_textureLayerSettings;
     QString m_runtimeTrace;
     QSortFilterProxyModel m_groundOverlayModel;
-    QList<QPair<const GeoDataGroundOverlay *, QImage> > m_groundOverlayCache;
+    QList<const GeoDataGroundOverlay *> m_groundOverlayCache;
     // For scheduling repaints
     QTimer           m_repaintTimer;
 };
@@ -104,8 +106,8 @@ TextureLayer::Private::Private( HttpDownloadManager *downloadManager,
     m_groundOverlayModel.setSortRole ( MarblePlacemarkModel::PopularityIndexRole );
     m_groundOverlayModel.sort (0, Qt::AscendingOrder );
 
-    connect( &m_groundOverlayModel, SIGNAL(rowsInserted(QModelIndex,int,int),
-             m_parent,              SLOT(addGroundOverlays(QModelIndex,int,int) );
+    connect( &m_groundOverlayModel, SIGNAL(rowsInserted(QModelIndex,int,int)),
+             m_parent,              SLOT(addGroundOverlays(QModelIndex,int,int)) );
 
     connect( &m_groundOverlayModel, SIGNAL(rowsAboutToBeRemoved(QModelIndex,int,int)),
              m_parent,              SLOT(removeGroundOverlays(QModelIndex,int,int)) );
@@ -164,15 +166,19 @@ void TextureLayer::Private::updateTile( const TileId &tileId, const QImage &tile
     requestDelayedRepaint();
 }
 
+bool TextureLayer::Private::drawOrderLessThan( const GeoDataGroundOverlay* o1, const GeoDataGroundOverlay* o2 )
+{
+    return o1->drawOrder() < o2->drawOrder();
+}
+
 void TextureLayer::Private::addGroundOverlays( QModelIndex parent, int first, int last )
 {
     for ( int i = first; i <= last; ++i ) {
         QModelIndex index = m_groundOverlayModel.index( i, 0, parent );
-        const GeoDataGroundOverlay *overlay = static_cast<GeoDataGroundOverlay *>(qvariant_cast<GeoDataObject *>( index.data( MarblePlacemarkModel::ObjectPointerRole ) ) );
+        const GeoDataGroundOverlay *overlay = qvariant_cast<GeoDataGroundOverlay *>( index.data( MarblePlacemarkModel::ObjectPointerRole ) );
 
-        int pos = 0;
-        for ( ; pos < m_groundOverlayCache.size() && *( m_groundOverlayCache.at( pos ).first ) < *overlay; ++pos ) ;
-        m_groundOverlayCache.insert( pos, qMakePair( overlay, QImage( overlay->absoluteIconFile() ) ) );
+        int pos = qLowerBound( m_groundOverlayCache.begin(), m_groundOverlayCache.end(), overlay, drawOrderLessThan) - m_groundOverlayCache.begin();
+        m_groundOverlayCache.insert( pos, overlay );
     }
 
     m_layerDecorator.setGroundOverlays( m_groundOverlayCache );
@@ -184,12 +190,11 @@ void TextureLayer::Private::removeGroundOverlays( QModelIndex parent, int first,
 {
     for ( int i = first; i <= last; ++i ) {
         QModelIndex index = m_groundOverlayModel.index( i, 0, parent );
-        const GeoDataGroundOverlay *overlay = static_cast<GeoDataGroundOverlay *>(qvariant_cast<GeoDataObject *>( index.data( MarblePlacemarkModel::ObjectPointerRole ) ) );
+        const GeoDataGroundOverlay *overlay = qvariant_cast<GeoDataGroundOverlay *>( index.data( MarblePlacemarkModel::ObjectPointerRole ) );
 
-        for ( int j = 0; j < m_groundOverlayCache.size(); ++j ) {
-            if ( overlay == m_groundOverlayCache.at( j ).first ) {
-                m_groundOverlayCache.removeAt( j );
-            }
+        int pos = qLowerBound( m_groundOverlayCache.begin(), m_groundOverlayCache.end(), overlay, drawOrderLessThan) - m_groundOverlayCache.begin();
+        if (pos >= 0 && pos < m_groundOverlayCache.size() ) {
+            m_groundOverlayCache.removeAt( pos );
         }
     }
 
