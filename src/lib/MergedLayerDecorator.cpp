@@ -23,6 +23,7 @@
 #include "SunLocator.h"
 #include "MarbleGlobal.h"
 #include "MarbleDebug.h"
+#include "MarbleMath.h"
 #include "GeoSceneTypes.h"
 #include "GeoSceneDocument.h"
 #include "GeoSceneHead.h"
@@ -222,6 +223,11 @@ StackedTile *MergedLayerDecorator::Private::createTile( const QVector<QSharedPoi
 void MergedLayerDecorator::Private::renderGroundOverlays( QImage *tileImage, const QVector<QSharedPointer<TextureTile> > &tiles ) const
 {
 
+    /* Do not render overlays on the Atlas Map. */
+    if ( tileImage->isGrayscale() ) {
+        return;
+    }
+
     /* All tiles are covering the same area. Pick one. */
     const TileId tileId = tiles.first()->id();
 
@@ -244,8 +250,8 @@ void MergedLayerDecorator::Private::renderGroundOverlays( QImage *tileImage, con
         latBot = ( radius - tileId.y() - 1 ) / radius *  90.0;
         break;
     case GeoSceneTiled::Mercator:
-        latTop = atan( sinh( ( radius - tileId.y() ) / radius * M_PI ) ) * 180.0 / M_PI;
-        latBot = atan( sinh( ( radius - tileId.y() - 1 ) / radius * M_PI ) ) * 180.0 / M_PI;
+        latTop = gd( ( radius - tileId.y() ) / radius * M_PI ) * RAD2DEG;
+        latBot = gd( ( radius - tileId.y() - 1 ) / radius * M_PI ) * RAD2DEG;
         break;
     }
 
