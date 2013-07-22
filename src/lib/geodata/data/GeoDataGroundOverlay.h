@@ -59,6 +59,4 @@ private:
 
 }
 
-Q_DECLARE_METATYPE( Marble::GeoDataGroundOverlay* )
-
 #endif
