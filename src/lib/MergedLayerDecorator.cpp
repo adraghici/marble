@@ -223,11 +223,6 @@ StackedTile *MergedLayerDecorator::Private::createTile( const QVector<QSharedPoi
 void MergedLayerDecorator::Private::renderGroundOverlays( QImage *tileImage, const QVector<QSharedPointer<TextureTile> > &tiles ) const
 {
 
-    /* Do not render overlays on the Atlas Map. */
-    if ( tileImage->isGrayscale() ) {
-        return;
-    }
-
     /* All tiles are covering the same area. Pick one. */
     const TileId tileId = tiles.first()->id();
 

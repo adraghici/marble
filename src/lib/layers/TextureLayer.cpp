@@ -60,6 +60,8 @@ public:
     void removeGroundOverlays( QModelIndex parent, int first, int last );
     void resetGroundOverlaysCache();
 
+    void setGroundOverlays();
+
     static bool drawOrderLessThan( const GeoDataGroundOverlay* o1, const GeoDataGroundOverlay* o2 );
 
 public:
@@ -118,7 +120,7 @@ TextureLayer::Private::Private( HttpDownloadManager *downloadManager,
     connect( &m_groundOverlayModel, SIGNAL(modelReset()),
              m_parent,              SLOT(resetGroundOverlaysCache()) );
 
-    m_layerDecorator.setGroundOverlays( m_groundOverlayCache );
+    setGroundOverlays();
 }
 
 void TextureLayer::Private::requestDelayedRepaint()
@@ -149,6 +151,8 @@ void TextureLayer::Private::updateTextureLayers()
             mDebug() << "disabling texture" << candidate->name();
         }
     }
+
+    setGroundOverlays();
 
     m_layerDecorator.setTextureLayers( result );
     m_tileLoader.clear();
@@ -181,7 +185,7 @@ void TextureLayer::Private::addGroundOverlays( QModelIndex parent, int first, in
         m_groundOverlayCache.insert( pos, overlay );
     }
 
-    m_layerDecorator.setGroundOverlays( m_groundOverlayCache );
+    setGroundOverlays();
 
     m_parent->reset();
 }
@@ -198,7 +202,7 @@ void TextureLayer::Private::removeGroundOverlays( QModelIndex parent, int first,
         }
     }
 
-    m_layerDecorator.setGroundOverlays( m_groundOverlayCache );
+    setGroundOverlays();
 
     m_parent->reset();
 }
@@ -207,10 +211,21 @@ void TextureLayer::Private::resetGroundOverlaysCache()
 {
     m_groundOverlayCache.clear();
 
-    m_layerDecorator.setGroundOverlays( m_groundOverlayCache );
+    setGroundOverlays();
 
     m_parent->reset();
 }
+
+void TextureLayer::Private::setGroundOverlays()
+{
+    if ( !m_texcolorizer ) {
+        m_layerDecorator.setGroundOverlays( m_groundOverlayCache );
+    }
+    else {
+        m_layerDecorator.setGroundOverlays( QList<const GeoDataGroundOverlay *>() );
+    }
+}
+
 
 TextureLayer::TextureLayer( HttpDownloadManager *downloadManager,
                             const SunLocator *sunLocator,
