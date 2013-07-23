@@ -40,8 +40,7 @@ AbstractProjection::~AbstractProjection()
 }
 
 AbstractProjectionPrivate::AbstractProjectionPrivate( AbstractProjection * parent )
-    : m_repeatX(false),
-      m_maxLat(0),
+    : m_maxLat(0),
       m_minLat(0),
       q_ptr( parent)
 {
@@ -91,54 +90,22 @@ void AbstractProjection::setMinLat( qreal minLat )
     d->m_minLat = minLat;
 }
 
-bool AbstractProjection::repeatableX() const
+bool AbstractProjection::screenCoordinates( const qreal lon, const qreal lat,
+                                            const ViewportParams *viewport,
+                                            qreal &x, qreal &y ) const
 {
-    return true;
+    bool globeHidesPoint;
+    GeoDataCoordinates geopoint(lon, lat);
+    return screenCoordinates( geopoint, viewport, x, y, globeHidesPoint );
 }
 
-bool AbstractProjection::repeatX() const
-{
-    Q_D( const AbstractProjection );
-    return d->m_repeatX;
-}
-
-void AbstractProjection::setRepeatX( bool repeatX )
-{
-    if ( repeatX && !repeatableX() ) {
-        mDebug() << Q_FUNC_INFO << "Trying to repeat a projection that is not repeatable";
-        return;
-    }
-
-    Q_D( AbstractProjection );
-    d->m_repeatX = repeatX;
-}
-
-bool AbstractProjection::screenCoordinates( const GeoDataCoordinates &geopoint, 
+bool AbstractProjection::screenCoordinates( const GeoDataCoordinates &geopoint,
                                             const ViewportParams *viewport,
                                             qreal &x, qreal &y ) const
 {
     bool globeHidesPoint;
 
     return screenCoordinates( geopoint, viewport, x, y, globeHidesPoint );
-}
-
-bool AbstractProjection::screenCoordinates( const GeoDataCoordinates &geopoint,
-                                            const ViewportParams *viewport,
-                                            QPointF &screenpoint ) const
-{
-    bool visible;
-    qreal x(0), y(0);
-    visible = screenCoordinates( geopoint, viewport, x, y );
-    screenpoint = QPointF( x,y );
-    return visible;
-}
-
-bool AbstractProjection::screenCoordinates( const GeoDataCoordinates &coordinates,
-                                    const ViewportParams *viewport,
-                                    qreal *x, qreal &y, int &pointRepeatNum, bool &globeHidesPoint ) const
-{
-    return screenCoordinates( coordinates, viewport, x, y, pointRepeatNum, 
-           QSizeF( 0.0, 0.0 ), globeHidesPoint );
 }
 
 GeoDataLatLonAltBox AbstractProjection::latLonAltBox( const QRect& screenRect,

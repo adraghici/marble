@@ -82,11 +82,7 @@ class MARBLE_EXPORT AbstractProjection
     qreal  minLat()  const;
     void setMinLat( qreal minLat );
 
-    virtual bool repeatableX() const;
-
-    bool   repeatX() const;
-    void   setRepeatX( bool repeatX );
-
+    virtual bool   repeatableX() const              { return false; }
     virtual bool   traversablePoles()  const        { return false; }
     virtual bool   traversableDateLine()  const     { return false; }
 
@@ -113,9 +109,9 @@ class MARBLE_EXPORT AbstractProjection
      *
      * @see ViewportParams
      */
-    virtual bool screenCoordinates( const qreal lon, const qreal lat,
-                                    const ViewportParams *viewport,
-                                    qreal& x, qreal& y ) const = 0;
+    bool screenCoordinates( const qreal lon, const qreal lat,
+                            const ViewportParams *viewport,
+                            qreal& x, qreal& y ) const;
 
     /**
      * @brief Get the screen coordinates corresponding to geographical coordinates in the map.
@@ -141,10 +137,6 @@ class MARBLE_EXPORT AbstractProjection
                             const ViewportParams *viewport,
                             qreal &x, qreal &y ) const;
 
-    bool screenCoordinates( const GeoDataCoordinates &geopoint,
-                            const ViewportParams *viewport,
-                            QPointF &screenpoint ) const;
-
     /**
      * @brief Get the coordinates of screen points for geographical coordinates in the map.
      *
@@ -161,11 +153,6 @@ class MARBLE_EXPORT AbstractProjection
      *
      * @see ViewportParams
      */
-    bool screenCoordinates( const GeoDataCoordinates &coordinates,
-                                    const ViewportParams *viewport,
-                                    qreal *x, qreal &y, int &pointRepeatNum,
-                                    bool &globeHidesPoint ) const;
-
     virtual bool screenCoordinates( const GeoDataCoordinates &coordinates,
                                     const ViewportParams *viewport,
                                     qreal *x, qreal &y, int &pointRepeatNum,

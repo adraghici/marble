@@ -24,7 +24,6 @@ using namespace Marble;
 EquirectProjection::EquirectProjection()
     : CylindricalProjection()
 {
-    setRepeatX( repeatableX() );
     setMinLat( minValidLat() );
     setMaxLat( maxValidLat() );
 }
@@ -41,33 +40,6 @@ qreal EquirectProjection::maxValidLat() const
 qreal EquirectProjection::minValidLat() const
 {
     return -90.0 * DEG2RAD;
-}
-
-bool EquirectProjection::screenCoordinates( const qreal lon, const qreal lat,
-                                            const ViewportParams *viewport,
-                                            qreal& x, qreal& y ) const
-{
-    // Convenience variables
-    int  radius = viewport->radius();
-    qreal  width  = (qreal)(viewport->width());
-    qreal  height = (qreal)(viewport->height());
-
-    // Calculate translation of center point
-    const qreal centerLon = viewport->centerLongitude();
-    const qreal centerLat = viewport->centerLatitude();
-
-    qreal  rad2Pixel = 2.0 * viewport->radius() / M_PI;
-
-    // Let (x, y) be the position on the screen of the point.
-    x = ( width  / 2.0 + ( lon - centerLon ) * rad2Pixel );
-    y = ( height / 2.0 - ( lat - centerLat ) * rad2Pixel );
-
-    // Return true if the calculated point is inside the screen area,
-    // otherwise return false.
-    return ( ( 0 <= y && y < height )
-             && ( ( 0 <= x && x < width )
-                  || ( 0 <= x - 4 * radius && x - 4 * radius < width )
-                  || ( 0 <= x + 4 * radius && x + 4 * radius < width ) ) );
 }
 
 bool EquirectProjection::screenCoordinates( const GeoDataCoordinates &geopoint, 
@@ -102,7 +74,7 @@ bool EquirectProjection::screenCoordinates( const GeoDataCoordinates &geopoint,
                   || ( 0 <= x + 4 * radius && x + 4 * radius < width ) ) );
 }
 
-bool EquirectProjection::screenCoordinates( const GeoDataCoordinates &geopoint,
+bool EquirectProjection::screenCoordinates( const GeoDataCoordinates &coordinates,
                                             const ViewportParams *viewport,
                                             qreal *x, qreal &y,
                                             int &pointRepeatNum,
@@ -119,32 +91,12 @@ bool EquirectProjection::screenCoordinates( const GeoDataCoordinates &geopoint,
     qreal  width  = (qreal)(viewport->width());
     qreal  height = (qreal)(viewport->height());
 
-    qreal  lon;
-    qreal  lat;
-    qreal  rad2Pixel = 2.0 * radius / M_PI;
-
-    const qreal centerLon = viewport->centerLongitude();
-    const qreal centerLat = viewport->centerLatitude();
-
-    geopoint.geoCoordinates( lon, lat );
-
     // Let (itX, y) be the first guess for one possible position on screen.
-    qreal itX = ( width  / 2.0 + rad2Pixel * ( lon - centerLon ) );
-    y = ( height / 2.0 - rad2Pixel * ( lat - centerLat ) );
+    qreal itX;
+    screenCoordinates( coordinates, viewport, itX, y);
 
     // Make sure that the requested point is within the visible y range:
     if ( 0 <= y + size.height() / 2.0 && y < height + size.height() / 2.0 ) {
-        // First we deal with the case where the repetition doesn't happen
-        if ( !repeatX() ) {
-            *x = itX;
-            if ( 0 < itX + size.width() / 2.0  && itX < width + size.width() / 2.0 ) {
-                return true;
-            }
-            else {
-                // the requested point is out of the visible x range:
-                return false;
-            }
-        }
         // For the repetition case the same geopoint gets displayed on 
         // the map many times.across the longitude.
 
@@ -260,29 +212,10 @@ GeoDataLatLonAltBox EquirectProjection::latLonAltBox( const QRect& screenRect,
     // The remaining algorithm should be pretty generic for all kinds of 
     // flat projections:
 
-    if ( repeatX() ) {
-        int xRepeatDistance = 4 * radius;
-        if ( width >= xRepeatDistance ) {
-            latLonAltBox.setWest( -M_PI );
-            latLonAltBox.setEast( +M_PI );
-        }
-    }
-    else {
-        // We need a point on the screen at maxLat that definitely gets displayed:
-        qreal averageLatitude = ( latLonAltBox.north() + latLonAltBox.south() ) / 2.0;
-    
-        GeoDataCoordinates maxLonPoint( +M_PI, averageLatitude, GeoDataCoordinates::Radian );
-        GeoDataCoordinates minLonPoint( -M_PI, averageLatitude, GeoDataCoordinates::Radian );
-    
-        qreal dummyX, dummyY; // not needed
-        bool dummyVal;
-    
-        if ( screenCoordinates( maxLonPoint, viewport, dummyX, dummyY, dummyVal ) ) {
-            latLonAltBox.setEast( +M_PI );
-        }
-        if ( screenCoordinates( minLonPoint, viewport, dummyX, dummyY, dummyVal ) ) {
-            latLonAltBox.setWest( -M_PI );
-        }
+    int xRepeatDistance = 4 * radius;
+    if ( width >= xRepeatDistance ) {
+        latLonAltBox.setWest( -M_PI );
+        latLonAltBox.setEast( +M_PI );
     }
 
     // Now we need to check whether maxLat (e.g. the north pole) gets displayed
@@ -295,13 +228,12 @@ GeoDataLatLonAltBox EquirectProjection::latLonAltBox( const QRect& screenRect,
     GeoDataCoordinates minLatPoint( averageLongitude, minLat(), 0.0, GeoDataCoordinates::Radian );
 
     qreal dummyX, dummyY; // not needed
-    bool dummyVal;
 
-    if ( screenCoordinates( maxLatPoint, viewport, dummyX, dummyY, dummyVal ) ) {
+    if ( screenCoordinates( maxLatPoint, viewport, dummyX, dummyY ) ) {
         latLonAltBox.setEast( +M_PI );
         latLonAltBox.setWest( -M_PI );
     }
-    if ( screenCoordinates( minLatPoint, viewport, dummyX, dummyY, dummyVal ) ) {
+    if ( screenCoordinates( minLatPoint, viewport, dummyX, dummyY ) ) {
         latLonAltBox.setEast( +M_PI );
         latLonAltBox.setWest( -M_PI );
     }

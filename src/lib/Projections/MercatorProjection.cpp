@@ -27,7 +27,6 @@ using namespace Marble;
 MercatorProjection::MercatorProjection()
     : CylindricalProjection()
 {
-    setRepeatX( repeatableX() );
     setMinLat( minValidLat() );
     setMaxLat( maxValidLat() );
 }
@@ -46,42 +45,6 @@ qreal MercatorProjection::minValidLat() const
 {
     // This is the min value where atanh( sin( lat ) ) is defined.
     return -85.05113 * DEG2RAD;
-}
-
-bool MercatorProjection::screenCoordinates( const qreal lon, const qreal _lat,
-                                            const ViewportParams *viewport,
-                                            qreal& x, qreal& y ) const
-{
-    const bool isLatValid = minLat() <= _lat && _lat <= maxLat();
-
-    qreal lat = _lat;
-    
-    if ( lat > maxLat() ) {
-        lat = maxLat();
-    }
-    if ( lat < minLat() ) {
-        lat = minLat();
-    }
-
-    // Convenience variables
-    int  radius = viewport->radius();
-    qreal  width  = (qreal)(viewport->width());
-    qreal  height = (qreal)(viewport->height());
-
-    qreal  rad2Pixel = 2 * radius / M_PI;
-
-    // Calculate translation of center point
-    const qreal centerLon = viewport->centerLongitude();
-    const qreal centerLat = viewport->centerLatitude();
-
-    // Let (x, y) be the position on the screen of the placemark..
-    x = ( width  / 2 + rad2Pixel * ( lon - centerLon ) );
-    y = ( height / 2 - rad2Pixel * ( atanh( sin( lat ) ) - atanh( sin( centerLat ) ) ) );
-
-    return isLatValid && ( ( 0 <= y && y < height )
-                  && ( ( 0 <= x && x < width )
-                  || ( 0 <= x - 4 * radius && x - 4 * radius < width )
-                  || ( 0 <= x + 4 * radius && x + 4 * radius < width ) ) );
 }
 
 bool MercatorProjection::screenCoordinates( const GeoDataCoordinates &geopoint, 
@@ -141,52 +104,17 @@ bool MercatorProjection::screenCoordinates( const GeoDataCoordinates &coordinate
     // obscured by the target planet itself.
     globeHidesPoint = false;
 
-    qreal  lon;
-    qreal  lat;
-
-    coordinates.geoCoordinates( lon, lat );
-
-    const bool isLatValid= minLat() <= lat && lat <= maxLat();
-
-    if ( lat > maxLat() ) {
-        GeoDataCoordinates approxCoords( coordinates );
-        approxCoords.setLatitude( maxLat() );
-        approxCoords.geoCoordinates( lon, lat );
-    }
-
-    if ( lat < minLat() ) {
-        GeoDataCoordinates approxCoords( coordinates );
-        approxCoords.setLatitude( minLat() );
-        approxCoords.geoCoordinates( lon, lat );
-    }
-
     // Convenience variables
     int  radius = viewport->radius();
     qreal  width  = (qreal)(viewport->width());
     qreal  height = (qreal)(viewport->height());
 
-    qreal  rad2Pixel = 2.0 * radius / M_PI;
-
-    const qreal centerLon = viewport->centerLongitude();
-    const qreal centerLat = viewport->centerLatitude();
-
     // Let (itX, y) be the first guess for one possible position on screen..
-    qreal itX = ( width  / 2.0 + rad2Pixel * ( lon - centerLon ) );
-    y = ( height / 2.0 - rad2Pixel * ( atanh( sin( lat ) ) - atanh( sin( centerLat ) ) ) );
+    qreal itX;
+    screenCoordinates( coordinates, viewport, itX, y);
 
     // Make sure that the requested point is within the visible y range:
     if ( 0 <= y + size.height() / 2.0 && y < height + size.height() / 2.0 ) {
-        // First we deal with the case where the repetition doesn't happen
-        if ( !repeatX() ) {
-            *x = itX;
-            if ( 0 < itX + size.width() / 2.0  && itX < width + size.width() / 2.0 ) {
-                return isLatValid;
-            }
-            else {
-                // the requested point is out of the visible x range:
-                return false;
-            }
-        }
         // For the repetition case the same geopoint gets displayed on 
         // the map many times.across the longitude.
 
@@ -217,7 +145,7 @@ bool MercatorProjection::screenCoordinates( const GeoDataCoordinates &coordinate
 
         pointRepeatNum = itNum;
 
-        return isLatValid && true;
+        return true;
     }
 
     // the requested point is out of the visible y range:
@@ -303,29 +231,10 @@ GeoDataLatLonAltBox MercatorProjection::latLonAltBox( const QRect& screenRect,
     // analytically the lon-/lat- range.
     // qreal pitch = GeoDataPoint::normalizeLat( viewport->planetAxis().pitch() );
 
-    if ( repeatX() ) {
-        int xRepeatDistance = 4 * viewport->radius();
-        if ( viewport->width() >= xRepeatDistance ) {
-            latLonAltBox.setWest( -M_PI );
-            latLonAltBox.setEast( +M_PI );
-        }
-    }
-    else {
-        // We need a point on the screen at maxLat that definitely gets displayed:
-        qreal averageLatitude = ( latLonAltBox.north() + latLonAltBox.south() ) / 2.0;
-    
-        GeoDataCoordinates maxLonPoint( +M_PI, averageLatitude, GeoDataCoordinates::Radian );
-        GeoDataCoordinates minLonPoint( -M_PI, averageLatitude, GeoDataCoordinates::Radian );
-    
-        qreal dummyX, dummyY; // not needed
-        bool dummyVal;
-    
-        if ( screenCoordinates( maxLonPoint, viewport, dummyX, dummyY, dummyVal ) ) {
-            latLonAltBox.setEast( +M_PI );
-        }
-        if ( screenCoordinates( minLonPoint, viewport, dummyX, dummyY, dummyVal ) ) {
-            latLonAltBox.setWest( -M_PI );
-        }
+    int xRepeatDistance = 4 * viewport->radius();
+    if ( viewport->width() >= xRepeatDistance ) {
+        latLonAltBox.setWest( -M_PI );
+        latLonAltBox.setEast( +M_PI );
     }
 
     return latLonAltBox;

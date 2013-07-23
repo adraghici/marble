@@ -250,13 +250,9 @@ int CylindricalProjectionPrivate::crossDateLine( const GeoDataCoordinates & aCoo
     qreal bLon = bCoord.longitude();
     qreal bSign = bLon > 0 ? 1 : -1;
 
-    Q_Q( const AbstractProjection );
-
     int sign = 0;
     qreal delta = 0;
-    if( aSign != bSign
-            && fabs(aLon) + fabs(bLon) > M_PI
-            && q->repeatX() ) {
+    if( aSign != bSign && fabs(aLon) + fabs(bLon) > M_PI ) {
         sign = aSign > bSign ? 1 : -1;
         mirrorCount += sign;
     }
@@ -364,7 +360,7 @@ bool CylindricalProjectionPrivate::lineStringToPolygon( const GeoDataLineString 
     }
 
     GeoDataLatLonAltBox box = lineString.latLonAltBox();
-    if( box.width() == 2*M_PI ) {
+    if( lineString.isClosed() && box.width() == 2*M_PI ) {
         QPolygonF *poly = polygons.last();
         if( box.containsPole( NorthPole ) ) {
             poly->push_front( QPointF( poly->first().x(), 0 ) );
@@ -404,8 +400,6 @@ void CylindricalProjectionPrivate::repeatPolygons( const ViewportParams *viewpor
 {
     Q_Q( const CylindricalProjection );
 
-    bool globeHidesPoint = false;
-
     qreal xEast = 0;
     qreal xWest = 0;
     qreal y = 0;
@@ -416,8 +410,8 @@ void CylindricalProjectionPrivate::repeatPolygons( const ViewportParams *viewpor
     GeoDataCoordinates westCoords( -M_PI, centerLatitude );
     GeoDataCoordinates eastCoords( +M_PI, centerLatitude );
 
-    q->screenCoordinates( westCoords, viewport, xWest, y, globeHidesPoint );
-    q->screenCoordinates( eastCoords, viewport, xEast, y, globeHidesPoint );
+    q->screenCoordinates( westCoords, viewport, xWest, y );
+    q->screenCoordinates( eastCoords, viewport, xEast, y );
 
     if ( xWest <= 0 && xEast >= viewport->width() - 1 ) {
         // mDebug() << "No repeats";
