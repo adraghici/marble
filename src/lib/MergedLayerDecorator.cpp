@@ -232,8 +232,8 @@ void MergedLayerDecorator::Private::renderGroundOverlays( QImage *tileImage, con
     qreal radius = ( 1 << tileId.zoomLevel() ) * textureLayer->levelZeroColumns() / 2.0;
     const qint64 x = tileId.x();
 
-    qreal lonLeft   = ( x - radius ) / radius * 180.0;
-    qreal lonRight  = ( x - radius + 1 ) / radius * 180.0;
+    qreal lonLeft   = ( x - radius ) / radius * M_PI;
+    qreal lonRight  = ( x - radius + 1 ) / radius * M_PI;
 
     radius = ( 1 << tileId.zoomLevel() ) * textureLayer->levelZeroRows() / 2.0;
     qreal latTop = 0;
@@ -241,12 +241,12 @@ void MergedLayerDecorator::Private::renderGroundOverlays( QImage *tileImage, con
 
     switch ( textureLayer->projection() ) {
     case GeoSceneTiled::Equirectangular:
-        latTop = ( radius - tileId.y() ) / radius *  90.0;
-        latBot = ( radius - tileId.y() - 1 ) / radius *  90.0;
+        latTop = ( radius - tileId.y() ) / radius *  M_PI / 2.0;
+        latBot = ( radius - tileId.y() - 1 ) / radius *  M_PI / 2.0;
         break;
     case GeoSceneTiled::Mercator:
-        latTop = gd( ( radius - tileId.y() ) / radius * M_PI ) * RAD2DEG;
-        latBot = gd( ( radius - tileId.y() - 1 ) / radius * M_PI ) * RAD2DEG;
+        latTop = gd( ( radius - tileId.y() ) / radius * M_PI );
+        latBot = gd( ( radius - tileId.y() - 1 ) / radius * M_PI );
         break;
     }
 
@@ -254,50 +254,49 @@ void MergedLayerDecorator::Private::renderGroundOverlays( QImage *tileImage, con
     qreal imgLonDiff = lonRight - lonLeft;
 
     /* Map the ground overlay to the image. */
-    for ( int y = 0; y < tileImage->height(); ++y ) {
-         QRgb *scanLine = ( QRgb* ) ( tileImage->scanLine( y ) );
+    for ( int i =  0; i < m_groundOverlays.size(); ++i ) {
 
-         qreal lat = latTop - ( (qreal) y / (qreal) tileImage->height() * imgLatDiff );
+        const GeoDataGroundOverlay* overlay = m_groundOverlays.at( i );
 
-         for ( int x = 0; x < tileImage->width(); ++x, ++scanLine ) {
-             qreal lon = lonLeft + ( (qreal) x / (qreal) tileImage->width() * imgLonDiff );
+        /* Overlay position */
+        const qreal latNorth = overlay->latLonBox().north();
+        const qreal latSouth = overlay->latLonBox().south();
+        const qreal lonWest = overlay->latLonBox().west();
+        const qreal lonEast = overlay->latLonBox().east();
 
-             for ( int i = m_groundOverlays.size() - 1; i >= 0; --i ) {
+        const qreal sinRotation = sin( overlay->latLonBox().rotation() );
+        const qreal cosRotation = cos( overlay->latLonBox().rotation() );
 
-                 const GeoDataGroundOverlay* overlay = m_groundOverlays.at( i );
+        const qreal centerLat = overlay->latLonBox().center().latitude();
+        const qreal centerLon = overlay->latLonBox().center().longitude();
 
-                 const int overlayHeight = overlay->icon().height();
-                 const int overlayWidth = overlay->icon().width();
+        const qreal pixelToLat = imgLatDiff / tileImage->height();
+        const qreal pixelToLon = imgLonDiff / tileImage->width();
 
-                 /* Overlay position */
-                 const qreal latNorth = overlay->latLonBox().north( GeoDataCoordinates::Degree );
-                 const qreal latSouth = overlay->latLonBox().south( GeoDataCoordinates::Degree );
-                 const qreal lonWest = overlay->latLonBox().west( GeoDataCoordinates::Degree );
-                 const qreal lonEast = overlay->latLonBox().east( GeoDataCoordinates::Degree );
+        const qreal latToPixel = overlay->icon().height() / ( latNorth - latSouth );
+        const qreal lonToPixel = overlay->icon().width() / ( lonEast - lonWest );
 
-                 qreal latDiff = latNorth - latSouth;
-                 qreal lonDiff = lonEast - lonWest;
+        for ( int y = 0; y < tileImage->height(); ++y ) {
+             QRgb *scanLine = ( QRgb* ) ( tileImage->scanLine( y ) );
 
-                 qreal rotationAngle = overlay->latLonBox().rotation();
+             qreal lat = latTop - y * pixelToLat;
 
-                 qreal centerLat = ( latNorth + latSouth ) / 2;
-                 qreal centerLon = ( lonWest + lonEast ) / 2;
+             for ( int x = 0; x < tileImage->width(); ++x, ++scanLine ) {
+                 qreal lon = lonLeft + x * pixelToLon;
 
-                 qreal lonR = ( lon - centerLon ) * cos( rotationAngle ) + ( lat - centerLat ) * sin( rotationAngle ) + centerLon;
-                 qreal latR = ( -lon + centerLon ) * sin( rotationAngle ) + ( lat - centerLat ) * cos( rotationAngle ) + centerLat;
+                 qreal rotatedLon = ( lon - centerLon ) * cosRotation + ( lat - centerLat ) * sinRotation + centerLon;
+                 qreal rotatedLat = ( -lon + centerLon ) * sinRotation + ( lat - centerLat ) * cosRotation + centerLat;
 
-                 if ( latR <= latNorth && latR >= latSouth && lonR >= lonWest && lonR <= lonEast ) {
-                     int px = (int) ( ( lonR - lonWest ) / lonDiff * overlayWidth );
-                     int py = overlayHeight - (int) ( ( latR - latSouth ) / latDiff * overlayHeight ) - 1;
+                 if ( overlay->latLonBox().contains( GeoDataCoordinates( rotatedLon, rotatedLat ) ) ) {
+                     int px = (int) ( ( rotatedLon - lonWest ) * lonToPixel );
+                     int py = overlay->icon().height() - (int) ( ( rotatedLat - latSouth ) * latToPixel ) - 1;
 
-                     if ( px < overlayWidth && py < overlayHeight ) {
+                     if ( px < overlay->icon().width() && py < overlay->icon().height() ) {
                          *scanLine = overlay->icon().pixel( px, py );
-                         break;
                      }
                  }
              }
-         }
-
+        }
     }
 }
 
