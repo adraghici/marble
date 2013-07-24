@@ -181,6 +181,8 @@ void TextureLayer::Private::addGroundOverlays( QModelIndex parent, int first, in
         QModelIndex index = m_groundOverlayModel.index( i, 0, parent );
         const GeoDataGroundOverlay *overlay = static_cast<GeoDataGroundOverlay *>( qvariant_cast<GeoDataObject *>( index.data( MarblePlacemarkModel::ObjectPointerRole ) ) );
 
+        if ( overlay->icon().isNull() ) continue;
+
         int pos = qLowerBound( m_groundOverlayCache.begin(), m_groundOverlayCache.end(), overlay, drawOrderLessThan ) - m_groundOverlayCache.begin();
         m_groundOverlayCache.insert( pos, overlay );
     }
