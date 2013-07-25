@@ -237,44 +237,37 @@ void MergedLayerDecorator::Private::renderGroundOverlays( QImage *tileImage, con
 
     radius = ( 1 << tileId.zoomLevel() ) * textureLayer->levelZeroRows() / 2.0;
     qreal latTop = 0;
-    qreal latBot = 0;
+    qreal latBottom = 0;
 
     switch ( textureLayer->projection() ) {
     case GeoSceneTiled::Equirectangular:
         latTop = ( radius - tileId.y() ) / radius *  M_PI / 2.0;
-        latBot = ( radius - tileId.y() - 1 ) / radius *  M_PI / 2.0;
+        latBottom = ( radius - tileId.y() - 1 ) / radius *  M_PI / 2.0;
         break;
     case GeoSceneTiled::Mercator:
         latTop = gd( ( radius - tileId.y() ) / radius * M_PI );
-        latBot = gd( ( radius - tileId.y() - 1 ) / radius * M_PI );
+        latBottom = gd( ( radius - tileId.y() - 1 ) / radius * M_PI );
         break;
     }
-
-    qreal imgLatDiff = latTop - latBot;
-    qreal imgLonDiff = lonRight - lonLeft;
 
     /* Map the ground overlay to the image. */
     for ( int i =  0; i < m_groundOverlays.size(); ++i ) {
 
         const GeoDataGroundOverlay* overlay = m_groundOverlays.at( i );
 
-        /* Overlay position */
-        const qreal latNorth = overlay->latLonBox().north();
-        const qreal latSouth = overlay->latLonBox().south();
-        const qreal lonWest = overlay->latLonBox().west();
-        const qreal lonEast = overlay->latLonBox().east();
+        const GeoDataLatLonBox overlayLatLonBox = overlay->latLonBox();
 
         const qreal sinRotation = sin( overlay->latLonBox().rotation() );
         const qreal cosRotation = cos( overlay->latLonBox().rotation() );
 
-        const qreal centerLat = overlay->latLonBox().center().latitude();
-        const qreal centerLon = overlay->latLonBox().center().longitude();
+        const qreal centerLat = overlayLatLonBox.center().latitude();
+        const qreal centerLon = overlayLatLonBox.center().longitude();
 
-        const qreal pixelToLat = imgLatDiff / tileImage->height();
-        const qreal pixelToLon = imgLonDiff / tileImage->width();
+        const qreal pixelToLat = GeoDataLatLonBox( latTop, latBottom, 0, 0 ).height() / tileImage->height();
+        const qreal pixelToLon = GeoDataLatLonBox( 0, 0, lonRight,lonLeft ).width() / tileImage->width();
 
-        const qreal latToPixel = overlay->icon().height() / ( latNorth - latSouth );
-        const qreal lonToPixel = overlay->icon().width() / ( lonEast - lonWest );
+        const qreal latToPixel = overlay->icon().height() / overlayLatLonBox.height();
+        const qreal lonToPixel = overlay->icon().width() / overlayLatLonBox.width();
 
         for ( int y = 0; y < tileImage->height(); ++y ) {
              QRgb *scanLine = ( QRgb* ) ( tileImage->scanLine( y ) );
@@ -288,10 +281,10 @@ void MergedLayerDecorator::Private::renderGroundOverlays( QImage *tileImage, con
                  qreal rotatedLat = ( -lon + centerLon ) * sinRotation + ( lat - centerLat ) * cosRotation + centerLat;
 
                  if ( overlay->latLonBox().contains( GeoDataCoordinates( rotatedLon, rotatedLat ) ) ) {
-                     int px = (int) ( ( rotatedLon - lonWest ) * lonToPixel );
-                     int py = overlay->icon().height() - (int) ( ( rotatedLat - latSouth ) * latToPixel ) - 1;
+                     int px = (int) ( GeoDataLatLonBox( 0, 0, rotatedLon, overlayLatLonBox.west() ).width() * lonToPixel );
+                     int py = overlay->icon().height() - (int) ( GeoDataLatLonBox( rotatedLat, overlayLatLonBox.south(), 0, 0 ).height() * latToPixel ) - 1;
 
-                     if ( px < overlay->icon().width() && py < overlay->icon().height() ) {
+                     if ( px >= 0 && px < overlay->icon().width() && py >= 0 && py < overlay->icon().height() ) {
                          *scanLine = overlay->icon().pixel( px, py );
                      }
                  }
