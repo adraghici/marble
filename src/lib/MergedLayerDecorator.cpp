@@ -29,6 +29,7 @@
 #include "GeoSceneMap.h"
 #include "GeoSceneTextureTile.h"
 #include "GeoSceneVectorTile.h"
+#include "ImageF.h"
 #include "MapThemeManager.h"
 #include "StackedTile.h"
 #include "TileLoaderHelper.h"
@@ -297,11 +298,11 @@ void MergedLayerDecorator::Private::renderGroundOverlays( QImage *tileImage, con
 
                  if ( overlay->latLonBox().contains( GeoDataCoordinates( rotatedLon, rotatedLat ) ) ) {
 
-                     int px = (int) ( GeoDataLatLonBox( 0, 0, rotatedLon, overlayLatLonBox.west() ).width() * lonToPixel );
-                     int py = overlay->icon().height() - (int) ( GeoDataLatLonBox( rotatedLat, overlayLatLonBox.south(), 0, 0 ).height() * latToPixel ) - 1;
+                     qreal px = ( GeoDataLatLonBox( 0, 0, rotatedLon, overlayLatLonBox.west() ).width() * lonToPixel );
+                     qreal py = (qreal) overlay->icon().height() - ( GeoDataLatLonBox( rotatedLat, overlayLatLonBox.south(), 0, 0 ).height() * latToPixel ) - 1;
 
                      if ( px >= 0 && px < overlay->icon().width() && py >= 0 && py < overlay->icon().height() ) {
-                         *scanLine = overlay->icon().pixel( px, py );
+                         *scanLine = ImageF::pixelF( overlay->icon(), px, py );
                      }
                  }
              }

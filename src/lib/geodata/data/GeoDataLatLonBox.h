@@ -34,7 +34,7 @@ class GeoDataLineString;
  * GeoDataLatLonBox is a 2D bounding box that describes a geographic area
  * in terms of latitude and longitude.
  *
- * The bounding box gets described by assigning the northern, southern,
+ * The bounding box gets described by assigning the northern, southern, 
  * eastern and western boundary.
  * So usually the value of the eastern boundary is bigger than the
  * value of the western boundary.
