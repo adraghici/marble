@@ -16,18 +16,18 @@
 
 #include <cmath>
 
-#include <QtCore/QAtomicInt>
-#include <QtCore/QPointer>
-#include <QtCore/QTime>
-#include <QtCore/QTimer>
-#include <QtCore/QAbstractItemModel>
-#include <QtCore/QSet>
-#include <QtGui/QItemSelectionModel>
-#include <QtGui/QSortFilterProxyModel>
+#include <QAtomicInt>
+#include <QPointer>
+#include <QTime>
+#include <QTimer>
+#include <QAbstractItemModel>
+#include <QSet>
+#include <QItemSelectionModel>
+#include <QSortFilterProxyModel>
 
 #if (QT_VERSION >= 0x040700 && QT_VERSION < 0x040800)
 // See comment below why this is needed
-#include <QtNetwork/QNetworkConfigurationManager>
+#include <QNetworkConfigurationManager>
 #endif
 
 #include "kdescendantsproxymodel.h"
@@ -309,7 +309,7 @@ void MarbleModel::setMapThemeId( const QString &mapThemeId )
         mDebug() << "Changing Planet";
         *(d->m_planet) = Planet( d->m_mapTheme->head()->target().toLower() );
         if ( radiusAttributeValue > 0.0 ) {
-		    d->m_planet->setRadius( radiusAttributeValue );
+            d->m_planet->setRadius( radiusAttributeValue );
         }
         sunLocator()->setPlanet(d->m_planet);
     }

@@ -145,11 +145,6 @@ class GEODATA_EXPORT GeoDataLatLonBox : public GeoDataObject
     GeoDataLatLonBox united( const GeoDataLatLonBox& other) const;
 
     /**
-     * @return Returns the smallest bounding box that contains this LatLonBox rotated with its given angle.
-     */
-    GeoDataLatLonBox toUnrotated() const;
-
-    /**
      * @brief Create the smallest bounding box from a line string.
      * @return the smallest bounding box that contains the linestring.
      */

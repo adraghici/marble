@@ -8,8 +8,8 @@
 
 // A QML-interface of Marble for the Meego operating system.
 
-#include <QtGui/QApplication>
-#include <QtDeclarative/QtDeclarative>
+#include <QApplication>
+#include <QtDeclarative>
 #include "MarbleDebug.h"
 #include "MarbleGlobal.h"
 
@@ -18,7 +18,7 @@ using namespace Marble;
 int main( int argc, char *argv[] )
 {
     QApplication app( argc, argv );
-    app.setApplicationName( "Marble Virtual Globe" );
+    app.setApplicationName( "Marble Touch" );
     app.setOrganizationName( "KDE" );
     app.setOrganizationDomain( "kde.org" );
 

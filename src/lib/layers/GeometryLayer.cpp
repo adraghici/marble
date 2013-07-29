@@ -34,8 +34,10 @@
 #include "GeoLineStringGraphicsItem.h"
 #include "GeoPolygonGraphicsItem.h"
 #include "GeoTrackGraphicsItem.h"
+#include "GeoDataGroundOverlay.h"
 #include "GeoDataPhotoOverlay.h"
 #include "GeoDataScreenOverlay.h"
+#include "GeoImageGraphicsItem.h"
 #include "GeoPhotoGraphicsItem.h"
 #include "ScreenOverlayGraphicsItem.h"
 #include "TileId.h"
@@ -43,9 +45,9 @@
 #include "MarblePlacemarkModel.h"
 
 // Qt
-#include <QtCore/qmath.h>
-#include <QtCore/QAbstractItemModel>
-#include <QtCore/QModelIndex>
+#include <qmath.h>
+#include <QAbstractItemModel>
+#include <QModelIndex>
 
 namespace Marble
 {
@@ -344,7 +346,13 @@ void GeometryLayerPrivate::createGraphicsItemFromGeometry( const GeoDataGeometry
 void GeometryLayerPrivate::createGraphicsItemFromOverlay( const GeoDataOverlay *overlay )
 {
     GeoGraphicsItem* item = 0;
-    if ( overlay->nodeType() == GeoDataTypes::GeoDataPhotoOverlayType ) {
+    if ( overlay->nodeType() == GeoDataTypes::GeoDataGroundOverlayType ) {
+        GeoDataGroundOverlay const * groundOverlay = static_cast<GeoDataGroundOverlay const *>( overlay );
+        GeoImageGraphicsItem *imageItem = new GeoImageGraphicsItem( overlay );
+        imageItem->setImageFile( groundOverlay->absoluteIconFile() );
+        imageItem->setLatLonBox( groundOverlay->latLonBox() );
+        item = imageItem;
+    } else if ( overlay->nodeType() == GeoDataTypes::GeoDataPhotoOverlayType ) {
         GeoDataPhotoOverlay const * photoOverlay = static_cast<GeoDataPhotoOverlay const *>( overlay );
         GeoPhotoGraphicsItem *photoItem = new GeoPhotoGraphicsItem( overlay );
         photoItem->setPhotoFile( photoOverlay->absoluteIconFile() );

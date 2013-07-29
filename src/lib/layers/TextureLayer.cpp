@@ -12,10 +12,10 @@
 
 #include "TextureLayer.h"
 
-#include <QtCore/qmath.h>
-#include <QtCore/QTimer>
-#include <QtCore/QList>
-#include <QtGui/QSortFilterProxyModel>
+#include <qmath.h>
+#include <QTimer>
+#include <QList>
+#include <QSortFilterProxyModel>
 
 #include "SphericalScanlineTextureMapper.h"
 #include "EquirectScanlineTextureMapper.h"

@@ -20,15 +20,15 @@
 #include <cmath>
 
 // Qt
-#include <QtCore/QAbstractItemModel>
-#include <QtCore/QTime>
-#include <QtCore/QTimer>
-#include <QtGui/QItemSelectionModel>
-#include <QtGui/QSizePolicy>
-#include <QtGui/QRegion>
+#include <QAbstractItemModel>
+#include <QTime>
+#include <QTimer>
+#include <QItemSelectionModel>
+#include <QSizePolicy>
+#include <QRegion>
 
 #ifdef MARBLE_DBUS
-#include <QtDBus/QDBusConnection>
+#include <QDBusConnection>
 #endif
 
 // Marble
@@ -1226,9 +1226,9 @@ AngleUnit MarbleMap::defaultAngleUnit() const
     if ( GeoDataCoordinates::defaultNotation() == GeoDataCoordinates::Decimal ) {
         return DecimalDegree;
     } else if ( GeoDataCoordinates::defaultNotation() == GeoDataCoordinates::UTM ) {
-    	return UTM;
+        return UTM;
     } else if ( GeoDataCoordinates::defaultNotation() == GeoDataCoordinates::MGRS ) {
-    	return MGRS;
+        return MGRS;
     }
 
     return DMSDegree;
