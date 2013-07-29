@@ -222,15 +222,6 @@ StackedTile *MergedLayerDecorator::Private::createTile( const QVector<QSharedPoi
 void MergedLayerDecorator::Private::renderGroundOverlays( QImage *tileImage, const QVector<QSharedPointer<TextureTile> > &tiles ) const
 {
 
-    /*
-    qreal north, south, east, west;
-    GeoDataLatLonBox box( ( 10 ) * DEG2RAD, ( 0 ) * DEG2RAD, ( 10 ) * DEG2RAD, ( 0 ) * DEG2RAD );
-    box.setRotation( 45 * DEG2RAD );
-
-    box.toUnrotated().boundaries( north, south, east, west, GeoDataCoordinates::Degree );
-    qDebug() << north << south << east << west;
-    */
-
     /* All tiles are covering the same area. Pick one. */
     const TileId tileId = tiles.first()->id();
 
@@ -269,9 +260,6 @@ void MergedLayerDecorator::Private::renderGroundOverlays( QImage *tileImage, con
 
         if ( !tileLatLonBox.intersects( overlayLatLonBox.toUnrotated() ) ) continue;
 
-        //qDebug() << tileLatLonBox.north() * RAD2DEG << tileLatLonBox.south() * RAD2DEG << tileLatLonBox.east() * RAD2DEG << tileLatLonBox.west() * RAD2DEG;
-        //qDebug() << overlayLatLonBox.toUnrotated().north() * RAD2DEG << overlayLatLonBox.toUnrotated().south() * RAD2DEG << overlayLatLonBox.toUnrotated().east() * RAD2DEG << overlayLatLonBox.toUnrotated().west() * RAD2DEG;
-
         const qreal sinRotation = sin( -overlay->latLonBox().rotation() );
         const qreal cosRotation = cos( -overlay->latLonBox().rotation() );
 
@@ -309,12 +297,8 @@ void MergedLayerDecorator::Private::renderGroundOverlays( QImage *tileImage, con
 
                  if ( overlay->latLonBox().contains( GeoDataCoordinates( rotatedLon, rotatedLat ) ) ) {
 
-                     //qDebug() << rotatedLat * RAD2DEG << rotatedLon * RAD2DEG;
-
                      int px = (int) ( GeoDataLatLonBox( 0, 0, rotatedLon, overlayLatLonBox.west() ).width() * lonToPixel );
                      int py = overlay->icon().height() - (int) ( GeoDataLatLonBox( rotatedLat, overlayLatLonBox.south(), 0, 0 ).height() * latToPixel ) - 1;
-
-                     //if ( rotatedLon * RAD2DEG < 0 ) continue;
 
                      if ( px >= 0 && px < overlay->icon().width() && py >= 0 && py < overlay->icon().height() ) {
                          *scanLine = overlay->icon().pixel( px, py );

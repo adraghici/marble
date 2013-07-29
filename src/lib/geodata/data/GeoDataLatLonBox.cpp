@@ -507,10 +507,6 @@ GeoDataLatLonBox GeoDataLatLonBox::toUnrotated() const
 {
     QList<GeoDataCoordinates> coordinates;
 
-    //qDebug() << north() * RAD2DEG << south() * RAD2DEG << east() * RAD2DEG << west() * RAD2DEG;
-
-    //qDebug() << crossesDateLine();
-
     coordinates.append( GeoDataCoordinates( west(), north() ) );
     coordinates.append( GeoDataCoordinates( west(), south() ) );
     coordinates.append( GeoDataCoordinates( east() + ( crossesDateLine() ? 2 * M_PI : 0 ), north() ) );
@@ -522,8 +518,6 @@ GeoDataLatLonBox GeoDataLatLonBox::toUnrotated() const
     const qreal centerLon = center().longitude() + ( GeoDataLatLonBox( 0, 0, center().longitude(), west() ).crossesDateLine() ? 2 * M_PI : 0 );
     const qreal centerLat = center().latitude();
 
-    //qDebug() << centerLon * RAD2DEG << centerLat * RAD2DEG;
-
     GeoDataLatLonBox box;
 
     bool northSet = false;
@@ -533,15 +527,11 @@ GeoDataLatLonBox GeoDataLatLonBox::toUnrotated() const
 
     foreach ( GeoDataCoordinates coord, coordinates ) {
 
-        //qDebug() << coord.latitude() * RAD2DEG << coord.longitude() * RAD2DEG;
-
         const qreal lon = coord.longitude();
         const qreal lat = coord.latitude();
 
         const qreal rotatedLon = ( lon - centerLon ) * cosRotation - ( lat - centerLat ) * sinRotation + centerLon;
         const qreal rotatedLat = ( lon - centerLon ) * sinRotation + ( lat - centerLat ) * cosRotation + centerLat;
-
-        //qDebug() << rotatedLat * RAD2DEG << rotatedLon * RAD2DEG;
 
         if ( !northSet || rotatedLat > box.north() ) {
             northSet = true;
@@ -564,15 +554,10 @@ GeoDataLatLonBox GeoDataLatLonBox::toUnrotated() const
         }
     }
 
-    //qDebug() << box.north() * RAD2DEG << box.south() * RAD2DEG << box.east() * RAD2DEG << box.west() * RAD2DEG;
-
     box.setBoundaries( GeoDataCoordinates::normalizeLat( box.north() ),
                        GeoDataCoordinates::normalizeLat( box.south() ),
                        GeoDataCoordinates::normalizeLon( box.east()  ),
                        GeoDataCoordinates::normalizeLon( box.west()  )  );
-
-    //qDebug() << box.north() * RAD2DEG << box.south() * RAD2DEG << box.east() * RAD2DEG << box.west() * RAD2DEG;
-
 
     return box;
 }
