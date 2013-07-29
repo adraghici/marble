@@ -34,7 +34,7 @@ class GeoDataLineString;
  * GeoDataLatLonBox is a 2D bounding box that describes a geographic area
  * in terms of latitude and longitude.
  *
- * The bounding box gets described by assigning the northern, southern, 
+ * The bounding box gets described by assigning the northern, southern,
  * eastern and western boundary.
  * So usually the value of the eastern boundary is bigger than the
  * value of the western boundary.
@@ -143,6 +143,11 @@ class GEODATA_EXPORT GeoDataLatLonBox : public GeoDataObject
      * @brief Returns the bounding LatLonBox of this box with the given one.
      */
     GeoDataLatLonBox united( const GeoDataLatLonBox& other) const;
+
+    /**
+     * @return Returns the smallest bounding box that contains this LatLonBox rotated with its given angle.
+     */
+    GeoDataLatLonBox toUnrotated() const;
 
     /**
      * @brief Create the smallest bounding box from a line string.

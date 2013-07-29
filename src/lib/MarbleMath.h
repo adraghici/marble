@@ -103,4 +103,6 @@ inline qreal gdInv( qreal x ) {
             + x2 * ( a14 + x2 * ( a15 + x2 * ( a16 ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) );
 }
 
+}
+
 #endif
