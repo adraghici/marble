@@ -23,7 +23,6 @@
 #include "SunLocator.h"
 #include "MarbleGlobal.h"
 #include "MarbleDebug.h"
-#include "MarbleMath.h"
 #include "GeoSceneTypes.h"
 #include "GeoSceneDocument.h"
 #include "GeoSceneHead.h"
@@ -223,6 +222,15 @@ StackedTile *MergedLayerDecorator::Private::createTile( const QVector<QSharedPoi
 void MergedLayerDecorator::Private::renderGroundOverlays( QImage *tileImage, const QVector<QSharedPointer<TextureTile> > &tiles ) const
 {
 
+    /*
+    qreal north, south, east, west;
+    GeoDataLatLonBox box( ( 10 ) * DEG2RAD, ( 0 ) * DEG2RAD, ( 10 ) * DEG2RAD, ( 0 ) * DEG2RAD );
+    box.setRotation( 45 * DEG2RAD );
+
+    box.toUnrotated().boundaries( north, south, east, west, GeoDataCoordinates::Degree );
+    qDebug() << north << south << east << west;
+    */
+
     /* All tiles are covering the same area. Pick one. */
     const TileId tileId = tiles.first()->id();
 
@@ -245,10 +253,12 @@ void MergedLayerDecorator::Private::renderGroundOverlays( QImage *tileImage, con
         latBottom = ( radius - tileId.y() - 1 ) / radius *  M_PI / 2.0;
         break;
     case GeoSceneTiled::Mercator:
-        latTop = gd( ( radius - tileId.y() ) / radius * M_PI );
-        latBottom = gd( ( radius - tileId.y() - 1 ) / radius * M_PI );
+        latTop = atan ( sinh ( ( radius - tileId.y() ) / radius * M_PI ) );
+        latBottom = atan ( sinh ( ( radius - tileId.y() - 1 ) / radius * M_PI ) );
         break;
     }
+
+    GeoDataLatLonBox tileLatLonBox( latTop, latBottom, lonRight, lonLeft );
 
     /* Map the ground overlay to the image. */
     for ( int i =  0; i < m_groundOverlays.size(); ++i ) {
@@ -257,14 +267,19 @@ void MergedLayerDecorator::Private::renderGroundOverlays( QImage *tileImage, con
 
         const GeoDataLatLonBox overlayLatLonBox = overlay->latLonBox();
 
-        const qreal sinRotation = sin( overlay->latLonBox().rotation() );
-        const qreal cosRotation = cos( overlay->latLonBox().rotation() );
+        if ( !tileLatLonBox.intersects( overlayLatLonBox.toUnrotated() ) ) continue;
 
-        const qreal centerLat = overlayLatLonBox.center().latitude();
-        const qreal centerLon = overlayLatLonBox.center().longitude();
+        //qDebug() << tileLatLonBox.north() * RAD2DEG << tileLatLonBox.south() * RAD2DEG << tileLatLonBox.east() * RAD2DEG << tileLatLonBox.west() * RAD2DEG;
+        //qDebug() << overlayLatLonBox.toUnrotated().north() * RAD2DEG << overlayLatLonBox.toUnrotated().south() * RAD2DEG << overlayLatLonBox.toUnrotated().east() * RAD2DEG << overlayLatLonBox.toUnrotated().west() * RAD2DEG;
 
-        const qreal pixelToLat = GeoDataLatLonBox( latTop, latBottom, 0, 0 ).height() / tileImage->height();
-        const qreal pixelToLon = GeoDataLatLonBox( 0, 0, lonRight,lonLeft ).width() / tileImage->width();
+        const qreal sinRotation = sin( -overlay->latLonBox().rotation() );
+        const qreal cosRotation = cos( -overlay->latLonBox().rotation() );
+
+        qreal centerLat = overlayLatLonBox.center().latitude();
+        qreal centerLon = overlayLatLonBox.center().longitude();
+
+        const qreal pixelToLat = tileLatLonBox.height() / tileImage->height();
+        const qreal pixelToLon = tileLatLonBox.width() / tileImage->width();
 
         const qreal latToPixel = overlay->icon().height() / overlayLatLonBox.height();
         const qreal lonToPixel = overlay->icon().width() / overlayLatLonBox.width();
@@ -277,12 +292,29 @@ void MergedLayerDecorator::Private::renderGroundOverlays( QImage *tileImage, con
              for ( int x = 0; x < tileImage->width(); ++x, ++scanLine ) {
                  qreal lon = lonLeft + x * pixelToLon;
 
-                 qreal rotatedLon = ( lon - centerLon ) * cosRotation + ( lat - centerLat ) * sinRotation + centerLon;
-                 qreal rotatedLat = ( -lon + centerLon ) * sinRotation + ( lat - centerLat ) * cosRotation + centerLat;
+                 if ( overlayLatLonBox.crossesDateLine() ) {
+                     if ( lon < 0 && centerLon > 0 ) centerLon -= 2 * M_PI;
+                     if ( lon > 0 && centerLon < 0 ) centerLon += 2 * M_PI;
+                 }
+
+                 if ( overlayLatLonBox.crossesDateLine() ) {
+                     if (overlayLatLonBox.east() > 0 && overlayLatLonBox.west() > 0 && lon > overlayLatLonBox.west() ) lon -=  2 * M_PI;
+                     if (overlayLatLonBox.east() < 0 && overlayLatLonBox.west() < 0 && lon < overlayLatLonBox.east() ) lon +=  2 * M_PI;
+                 }
+
+                 qreal rotatedLon = ( lon - centerLon ) * cosRotation - ( lat - centerLat ) * sinRotation + centerLon;
+                 qreal rotatedLat = ( lon - centerLon ) * sinRotation + ( lat - centerLat ) * cosRotation + centerLat;
+
+                 GeoDataCoordinates::normalizeLonLat( rotatedLon, rotatedLat );
 
                  if ( overlay->latLonBox().contains( GeoDataCoordinates( rotatedLon, rotatedLat ) ) ) {
+
+                     //qDebug() << rotatedLat * RAD2DEG << rotatedLon * RAD2DEG;
+
                      int px = (int) ( GeoDataLatLonBox( 0, 0, rotatedLon, overlayLatLonBox.west() ).width() * lonToPixel );
                      int py = overlay->icon().height() - (int) ( GeoDataLatLonBox( rotatedLat, overlayLatLonBox.south(), 0, 0 ).height() * latToPixel ) - 1;
+
+                     //if ( rotatedLon * RAD2DEG < 0 ) continue;
 
                      if ( px >= 0 && px < overlay->icon().width() && py >= 0 && py < overlay->icon().height() ) {
                          *scanLine = overlay->icon().pixel( px, py );
