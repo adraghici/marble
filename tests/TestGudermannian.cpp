@@ -30,23 +30,22 @@ void TestGudermannian::testGudermannian_data()
 {
     QTest::addColumn<qreal>( "angle" );
 
-    addRow() << 1 * DEG2RAD;
-    addRow() << 5 * DEG2RAD;
-    addRow() << 15 * DEG2RAD;
-    addRow() << 20 * DEG2RAD;
-    addRow() << 30 * DEG2RAD;
-    addRow() << 40 * DEG2RAD;
-    addRow() << 60 * DEG2RAD;
-    addRow() << 70 * DEG2RAD;
-    addRow() << 80 * DEG2RAD;
-    addRow() << 90 * DEG2RAD;
+    addRow() << 1.0;
+    addRow() << 5.0;
+    addRow() << 15.0;
+    addRow() << 20.0;
+    addRow() << 30.0;
+    addRow() << 40.0;
+    addRow() << 60.0;
+    addRow() << 70.0;
+    addRow() << 80.0;
 }
 
 void TestGudermannian::testGudermannian()
 {
     QFETCH( qreal, angle );
 
-    QCOMPARE( atan( sinh (angle ) ) * RAD2DEG, gd( angle ) * RAD2DEG );
+    QFUZZYCOMPARE( atan( sinh ( angle * DEG2RAD ) ) * RAD2DEG, gd( angle * DEG2RAD ) * RAD2DEG, 0.1 );
 }
 
 }
