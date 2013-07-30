@@ -515,7 +515,7 @@ GeoDataLatLonBox GeoDataLatLonBox::toCircumscribedRectangle() const
     const qreal cosRotation = cos( rotation() );
     const qreal sinRotation = sin( rotation() );
 
-    const qreal centerLon = center().longitude() + ( GeoDataLatLonBox( 0, 0, center().longitude(), west() ).crossesDateLine() ? 2 * M_PI : 0 );
+    const qreal centerLon = center().longitude() + ( GeoDataLatLonBox( 0, 0, center().longitude(), west() ).crossesDateLine() ? M_PI : 0 );
     const qreal centerLat = center().latitude();
 
     GeoDataLatLonBox box;
@@ -558,7 +558,6 @@ GeoDataLatLonBox GeoDataLatLonBox::toCircumscribedRectangle() const
                        GeoDataCoordinates::normalizeLat( box.south() ),
                        GeoDataCoordinates::normalizeLon( box.east()  ),
                        GeoDataCoordinates::normalizeLon( box.west()  )  );
-
     return box;
 }
 
