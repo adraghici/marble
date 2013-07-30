@@ -259,7 +259,7 @@ void MergedLayerDecorator::Private::renderGroundOverlays( QImage *tileImage, con
 
         const GeoDataLatLonBox overlayLatLonBox = overlay->latLonBox();
 
-        if ( !tileLatLonBox.intersects( overlayLatLonBox.toUnrotated() ) ) continue;
+        if ( !tileLatLonBox.intersects( overlayLatLonBox.toCircumscribedRectangle() ) ) continue;
 
         const qreal sinRotation = sin( -overlay->latLonBox().rotation() );
         const qreal cosRotation = cos( -overlay->latLonBox().rotation() );

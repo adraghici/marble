@@ -503,7 +503,7 @@ GeoDataLatLonBox GeoDataLatLonBox::united( const GeoDataLatLonBox& other ) const
     return result;
 }
 
-GeoDataLatLonBox GeoDataLatLonBox::toUnrotated() const
+GeoDataLatLonBox GeoDataLatLonBox::toCircumscribedRectangle() const
 {
     QList<GeoDataCoordinates> coordinates;
 
