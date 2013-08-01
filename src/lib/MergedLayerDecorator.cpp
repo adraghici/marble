@@ -226,31 +226,7 @@ void MergedLayerDecorator::Private::renderGroundOverlays( QImage *tileImage, con
     /* All tiles are covering the same area. Pick one. */
     const TileId tileId = tiles.first()->id();
 
-    const GeoSceneTextureTile * textureLayer = findRelevantTextureLayers( tileId ).first();
-
-    /* Find the LatLonBox covered by the tileImage. */
-    qreal radius = ( 1 << tileId.zoomLevel() ) * textureLayer->levelZeroColumns() / 2.0;
-    const qint64 x = tileId.x();
-
-    qreal lonLeft   = ( x - radius ) / radius * M_PI;
-    qreal lonRight  = ( x - radius + 1 ) / radius * M_PI;
-
-    radius = ( 1 << tileId.zoomLevel() ) * textureLayer->levelZeroRows() / 2.0;
-    qreal latTop = 0;
-    qreal latBottom = 0;
-
-    switch ( textureLayer->projection() ) {
-    case GeoSceneTiled::Equirectangular:
-        latTop = ( radius - tileId.y() ) / radius *  M_PI / 2.0;
-        latBottom = ( radius - tileId.y() - 1 ) / radius *  M_PI / 2.0;
-        break;
-    case GeoSceneTiled::Mercator:
-        latTop = atan ( sinh ( ( radius - tileId.y() ) / radius * M_PI ) );
-        latBottom = atan ( sinh ( ( radius - tileId.y() - 1 ) / radius * M_PI ) );
-        break;
-    }
-
-    GeoDataLatLonBox tileLatLonBox( latTop, latBottom, lonRight, lonLeft );
+    GeoDataLatLonBox tileLatLonBox = GeoDataLatLonBox::fromTileId( tileId, findRelevantTextureLayers( tileId ).first() );
 
     /* Map the ground overlay to the image. */
     for ( int i =  0; i < m_groundOverlays.size(); ++i ) {
@@ -276,10 +252,10 @@ void MergedLayerDecorator::Private::renderGroundOverlays( QImage *tileImage, con
         for ( int y = 0; y < tileImage->height(); ++y ) {
              QRgb *scanLine = ( QRgb* ) ( tileImage->scanLine( y ) );
 
-             qreal lat = latTop - y * pixelToLat;
+             qreal lat = tileLatLonBox.north() - y * pixelToLat;
 
              for ( int x = 0; x < tileImage->width(); ++x, ++scanLine ) {
-                 qreal lon = lonLeft + x * pixelToLon;
+                 qreal lon = tileLatLonBox.west() + x * pixelToLon;
 
                  if ( overlayLatLonBox.crossesDateLine() ) {
                      if ( lon < 0 && centerLon > 0 ) centerLon -= 2 * M_PI;
