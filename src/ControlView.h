@@ -18,12 +18,11 @@
 #define MARBLE_CONTROLVIEW_H
 
 
-#include <QtGui/QWidget>
-#include <QtGui/QPixmap>
-#include <QtCore/QPointer>
+#include <QWidget>
+#include <QPixmap>
+#include <QPointer>
 
 #include "MarbleWidget.h"
-#include "MarbleControlBox.h"
 
 class QSplitter;
 class QPrintDialog;
@@ -35,6 +34,8 @@ class QMenu;
 namespace Marble
 {
 
+class CurrentLocationWidget;
+class MapThemeManager;
 class MarbleModel;
 
 class ControlView : public QWidget
@@ -53,6 +54,7 @@ class ControlView : public QWidget
 
     MarbleWidget      *marbleWidget()  const { return m_marbleWidget; }
     MarbleModel       *marbleModel()         { return m_marbleWidget->model(); }
+    MapThemeManager   *mapThemeManager();
 
     void zoomIn();
     void zoomOut();
@@ -124,6 +126,7 @@ private Q_SLOTS:
     void printDrivingInstructions( QTextDocument &document, QString &text );
     void printDrivingInstructionsAdvice( QTextDocument &document, QString &text );
 
+    MapThemeManager   *const m_mapThemeManager;
     MarbleWidget      *m_marbleWidget;
     QString            m_externalEditor;
     QDockWidget       *m_searchDock;

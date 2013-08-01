@@ -577,7 +577,7 @@ QString GeoDataLatLonBox::toString( GeoDataCoordinates::Unit unit ) const
     }
 
     return QString( "GeoDataLatLonBox::text(): Error in unit: %1\n" )
-	.arg( unit );
+    .arg( unit );
 }
 
 GeoDataLatLonBox& GeoDataLatLonBox::operator=( const GeoDataLatLonBox &other )

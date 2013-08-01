@@ -14,10 +14,12 @@
 #include "Coordinate.h"
 #include "Placemark.h"
 
-#include <QtGui/QGraphicsProxyWidget>
-#include <QtCore/QList>
-#include <QtCore/QPoint>
-#include <QtDeclarative/QtDeclarative>
+#include "MapThemeManager.h"
+
+#include <QGraphicsProxyWidget>
+#include <QList>
+#include <QPoint>
+#include <QtDeclarative>
 
 using Marble::GeoDataCoordinates; // Ouch. For signal/slot connection across different namespaces
 
@@ -204,6 +206,8 @@ private:
 
     /** Wrapped MarbleWidget */
     Marble::MarbleWidget *const m_marbleWidget;
+
+    Marble::MapThemeManager m_mapThemeManager;
 
     bool m_inputEnabled;
 

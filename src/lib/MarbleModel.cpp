@@ -309,7 +309,7 @@ void MarbleModel::setMapThemeId( const QString &mapThemeId )
         mDebug() << "Changing Planet";
         *(d->m_planet) = Planet( d->m_mapTheme->head()->target().toLower() );
         if ( radiusAttributeValue > 0.0 ) {
-		    d->m_planet->setRadius( radiusAttributeValue );
+            d->m_planet->setRadius( radiusAttributeValue );
         }
         sunLocator()->setPlanet(d->m_planet);
     }

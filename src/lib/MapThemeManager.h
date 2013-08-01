@@ -13,8 +13,8 @@
 #ifndef MARBLE_MAPTHEMEMANAGER_H
 #define MARBLE_MAPTHEMEMANAGER_H
 
-#include <QtCore/QObject>
-#include <QtCore/QStringList>
+#include <QObject>
+#include <QStringList>
 
 #include "marble_export.h"
 
@@ -78,7 +78,7 @@ class MARBLE_EXPORT MapThemeManager : public QObject
      * This helper method should only get used by MarbleModel to load the
      * current theme into memory or by the MapThemeManager.
      */
-    GeoSceneDocument* loadMapTheme( const QString& mapThemeStringID ) const;
+    static GeoSceneDocument* loadMapTheme( const QString& mapThemeStringID );
 
     /**
      * @brief Deletes the map theme with the specified map theme ID.
