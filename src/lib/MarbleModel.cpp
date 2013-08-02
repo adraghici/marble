@@ -80,7 +80,6 @@ class MarbleModelPrivate
           m_planet( new Planet( "earth" ) ),
           m_sunLocator( &m_clock, m_planet ),
           m_pluginManager(),
-          m_mapThemeManager(),
           m_homePoint( -9.4, 54.8, 0.0, GeoDataCoordinates::Degree ),  // Some point that tackat defined. :-)
           m_homeZoom( 1050 ),
           m_mapTheme( 0 ),
@@ -120,7 +119,6 @@ class MarbleModelPrivate
     SunLocator               m_sunLocator;
 
     PluginManager            m_pluginManager;
-    MapThemeManager          m_mapThemeManager;
 
     // The home position
     GeoDataCoordinates       m_homePoint;
@@ -245,7 +243,7 @@ void MarbleModel::setMapThemeId( const QString &mapThemeId )
     if ( !mapThemeId.isEmpty() && mapThemeId == this->mapThemeId() )
         return;
 
-    GeoSceneDocument *mapTheme = d->m_mapThemeManager.loadMapTheme( mapThemeId );
+    GeoSceneDocument *mapTheme = MapThemeManager::loadMapTheme( mapThemeId );
     if ( !mapTheme ) {
         // Check whether the previous theme works
         if ( d->m_mapTheme ){
@@ -256,7 +254,7 @@ void MarbleModel::setMapThemeId( const QString &mapThemeId )
         // Fall back to default theme
         QString defaultTheme = "earth/srtm/srtm.dgml";
         qWarning() << "Falling back to default theme:" << defaultTheme;
-        mapTheme = d->m_mapThemeManager.loadMapTheme( defaultTheme );
+        mapTheme = MapThemeManager::loadMapTheme( defaultTheme );
     }
 
     // If this last resort doesn't work either shed a tear and exit
@@ -309,7 +307,7 @@ void MarbleModel::setMapThemeId( const QString &mapThemeId )
         mDebug() << "Changing Planet";
         *(d->m_planet) = Planet( d->m_mapTheme->head()->target().toLower() );
         if ( radiusAttributeValue > 0.0 ) {
-            d->m_planet->setRadius( radiusAttributeValue );
+		    d->m_planet->setRadius( radiusAttributeValue );
         }
         sunLocator()->setPlanet(d->m_planet);
     }
@@ -394,11 +392,6 @@ void MarbleModel::setHome( const GeoDataCoordinates& homePoint, int zoom )
     d->m_homePoint = homePoint;
     d->m_homeZoom = zoom;
     emit homeChanged( d->m_homePoint );
-}
-
-MapThemeManager *MarbleModel::mapThemeManager()
-{
-    return &d->m_mapThemeManager;
 }
 
 HttpDownloadManager *MarbleModel::downloadManager()
