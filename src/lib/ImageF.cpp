@@ -18,18 +18,12 @@ ImageF::ImageF()
 uint ImageF::pixelF( const QImage& image, qreal x, qreal y )
 {
 
-    QRgb topLeftPixel = image.pixel( (int) x, (int) y );
-
-    return pixelF( image, x, y, topLeftPixel );
-}
-
-uint ImageF::pixelF( const QImage& image, qreal x, qreal y, const QRgb& topLeftPixel )
-{
+    const QRgb& topLeftPixel = image.pixel( (int) x, (int) y );
 
     // Bilinear interpolation to determine the color of a subpixel
 
-    int iX = (int) x;
-    int iY = (int) y;
+    int iX = int( x );
+    int iY = int( y );
 
     qreal fY = y - iY;
 
@@ -57,9 +51,9 @@ uint ImageF::pixelF( const QImage& image, qreal x, qreal y, const QRgb& topLeftP
             qreal mr_blue  = ( 1.0 - fY ) * qBlue ( topRightPixel ) + fY * qBlue ( bottomRightPixel );
 
             // Blending the color values of the resulting middle left and middle right points
-            int mm_red   = (int) ( ( 1.0 - fX ) * ml_red   + fX * mr_red   );
-            int mm_green = (int) ( ( 1.0 - fX ) * ml_green + fX * mr_green );
-            int mm_blue  = (int) ( ( 1.0 - fX ) * ml_blue  + fX * mr_blue  );
+            int mm_red   = int( ( ( 1.0 - fX ) * ml_red   + fX * mr_red   ) );
+            int mm_green = int( ( ( 1.0 - fX ) * ml_green + fX * mr_green ) );
+            int mm_blue  = int( ( ( 1.0 - fX ) * ml_blue  + fX * mr_blue  ) );
 
             return qRgb( mm_red, mm_green, mm_blue );
         }
@@ -79,9 +73,9 @@ uint ImageF::pixelF( const QImage& image, qreal x, qreal y, const QRgb& topLeftP
             QRgb topRightPixel    =  image.pixel( iX + 1, iY );
 
             // Blending the color values of the top left and top right point
-            int tm_red   = (int)( ( 1.0 - fX ) * qRed  ( topLeftPixel ) + fX * qRed  ( topRightPixel ) );
-            int tm_green = (int)( ( 1.0 - fX ) * qGreen( topLeftPixel ) + fX * qGreen( topRightPixel ) );
-            int tm_blue  = (int)( ( 1.0 - fX ) * qBlue ( topLeftPixel ) + fX * qBlue ( topRightPixel ) );
+            int tm_red   = int( ( ( 1.0 - fX ) * qRed  ( topLeftPixel ) + fX * qRed  ( topRightPixel ) ) );
+            int tm_green = int( ( ( 1.0 - fX ) * qGreen( topLeftPixel ) + fX * qGreen( topRightPixel ) ) );
+            int tm_blue  = int( ( ( 1.0 - fX ) * qBlue ( topLeftPixel ) + fX * qBlue ( topRightPixel ) ) );
 
             return qRgb( tm_red, tm_green, tm_blue );
         }
