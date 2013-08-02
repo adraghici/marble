@@ -60,7 +60,7 @@ public:
     void removeGroundOverlays( QModelIndex parent, int first, int last );
     void resetGroundOverlaysCache();
 
-    void setGroundOverlays();
+    void updateGroundOverlays();
 
     static bool drawOrderLessThan( const GeoDataGroundOverlay* o1, const GeoDataGroundOverlay* o2 );
 
@@ -120,7 +120,7 @@ TextureLayer::Private::Private( HttpDownloadManager *downloadManager,
     connect( &m_groundOverlayModel, SIGNAL(modelReset()),
              m_parent,              SLOT(resetGroundOverlaysCache()) );
 
-    setGroundOverlays();
+    updateGroundOverlays();
 }
 
 void TextureLayer::Private::requestDelayedRepaint()
@@ -152,7 +152,7 @@ void TextureLayer::Private::updateTextureLayers()
         }
     }
 
-    setGroundOverlays();
+    updateGroundOverlays();
 
     m_layerDecorator.setTextureLayers( result );
     m_tileLoader.clear();
@@ -181,13 +181,15 @@ void TextureLayer::Private::addGroundOverlays( QModelIndex parent, int first, in
         QModelIndex index = m_groundOverlayModel.index( i, 0, parent );
         const GeoDataGroundOverlay *overlay = static_cast<GeoDataGroundOverlay *>( qvariant_cast<GeoDataObject *>( index.data( MarblePlacemarkModel::ObjectPointerRole ) ) );
 
-        if ( overlay->icon().isNull() ) continue;
+        if ( overlay->icon().isNull() ) {
+            continue;
+        }
 
         int pos = qLowerBound( m_groundOverlayCache.begin(), m_groundOverlayCache.end(), overlay, drawOrderLessThan ) - m_groundOverlayCache.begin();
         m_groundOverlayCache.insert( pos, overlay );
     }
 
-    setGroundOverlays();
+    updateGroundOverlays();
 
     m_parent->reset();
 }
@@ -204,7 +206,7 @@ void TextureLayer::Private::removeGroundOverlays( QModelIndex parent, int first,
         }
     }
 
-    setGroundOverlays();
+    updateGroundOverlays();
 
     m_parent->reset();
 }
@@ -213,18 +215,18 @@ void TextureLayer::Private::resetGroundOverlaysCache()
 {
     m_groundOverlayCache.clear();
 
-    setGroundOverlays();
+    updateGroundOverlays();
 
     m_parent->reset();
 }
 
-void TextureLayer::Private::setGroundOverlays()
+void TextureLayer::Private::updateGroundOverlays()
 {
     if ( !m_texcolorizer ) {
-        m_layerDecorator.setGroundOverlays( m_groundOverlayCache );
+        m_layerDecorator.updateGroundOverlays( m_groundOverlayCache );
     }
     else {
-        m_layerDecorator.setGroundOverlays( QList<const GeoDataGroundOverlay *>() );
+        m_layerDecorator.updateGroundOverlays( QList<const GeoDataGroundOverlay *>() );
     }
 }
 
