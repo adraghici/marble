@@ -22,6 +22,7 @@
 #include "blendings/BlendingFactory.h"
 #include "SunLocator.h"
 #include "MarbleGlobal.h"
+#include "MarbleMath.h"
 #include "MarbleDebug.h"
 #include "GeoSceneTypes.h"
 #include "GeoSceneDocument.h"
@@ -120,7 +121,7 @@ void MergedLayerDecorator::setTextureLayers( const QVector<const GeoSceneTexture
     d->detectMaxTileLevel();
 }
 
-void MergedLayerDecorator::setGroundOverlays(const QList<const GeoDataGroundOverlay *> &groundOverlays )
+void MergedLayerDecorator::updateGroundOverlays(const QList<const GeoDataGroundOverlay *> &groundOverlays )
 {
     d->m_groundOverlays = groundOverlays;
 }
@@ -226,7 +227,29 @@ void MergedLayerDecorator::Private::renderGroundOverlays( QImage *tileImage, con
     /* All tiles are covering the same area. Pick one. */
     const TileId tileId = tiles.first()->id();
 
-    GeoDataLatLonBox tileLatLonBox = GeoDataLatLonBox::fromTileId( tileId, findRelevantTextureLayers( tileId ).first() );
+    const GeoSceneTextureTile *textureLayer = findRelevantTextureLayers( tileId ).first();
+
+    qreal radius = ( 1 << tileId.zoomLevel() ) * textureLayer->levelZeroColumns() / 2.0;
+
+    qreal lonLeft   = ( tileId.x() - radius ) / radius * M_PI;
+    qreal lonRight  = ( tileId.x() - radius + 1 ) / radius * M_PI;
+
+    radius = ( 1 << tileId.zoomLevel() ) * textureLayer->levelZeroRows() / 2.0;
+    qreal latTop = 0;
+    qreal latBottom = 0;
+
+    switch ( textureLayer->projection() ) {
+    case GeoSceneTiled::Equirectangular:
+        latTop = ( radius - tileId.y() ) / radius *  M_PI / 2.0;
+        latBottom = ( radius - tileId.y() - 1 ) / radius *  M_PI / 2.0;
+        break;
+    case GeoSceneTiled::Mercator:
+        latTop = gd( ( radius - tileId.y() ) / radius * M_PI );
+        latBottom = gd( ( radius - tileId.y() - 1 ) / radius * M_PI );
+        break;
+    }
+
+    GeoDataLatLonBox tileLatLonBox = GeoDataLatLonBox( latTop, latBottom, lonRight, lonLeft );
 
     /* Map the ground overlay to the image. */
     for ( int i =  0; i < m_groundOverlays.size(); ++i ) {
@@ -235,13 +258,14 @@ void MergedLayerDecorator::Private::renderGroundOverlays( QImage *tileImage, con
 
         const GeoDataLatLonBox overlayLatLonBox = overlay->latLonBox();
 
-        if ( !tileLatLonBox.intersects( overlayLatLonBox.toCircumscribedRectangle() ) ) continue;
+        if ( !tileLatLonBox.intersects( overlayLatLonBox.toCircumscribedRectangle() ) ) {
+            continue;
+        }
 
         const qreal sinRotation = sin( -overlay->latLonBox().rotation() );
         const qreal cosRotation = cos( -overlay->latLonBox().rotation() );
 
-        qreal centerLat = overlayLatLonBox.center().latitude();
-        qreal centerLon = overlayLatLonBox.center().longitude();
+        const qreal centerLat = overlayLatLonBox.center().latitude();
 
         const qreal pixelToLat = tileLatLonBox.height() / tileImage->height();
         const qreal pixelToLon = tileLatLonBox.width() / tileImage->width();
@@ -255,16 +279,20 @@ void MergedLayerDecorator::Private::renderGroundOverlays( QImage *tileImage, con
              qreal lat = tileLatLonBox.north() - y * pixelToLat;
 
              for ( int x = 0; x < tileImage->width(); ++x, ++scanLine ) {
-                 qreal lon = tileLatLonBox.west() + x * pixelToLon;
+                 qreal lon = GeoDataCoordinates::normalizeLon( tileLatLonBox.west() + x * pixelToLon );
+
+                 qreal centerLon = overlayLatLonBox.center().longitude();
 
                  if ( overlayLatLonBox.crossesDateLine() ) {
-                     if ( lon < 0 && centerLon > 0 ) centerLon -= 2 * M_PI;
-                     if ( lon > 0 && centerLon < 0 ) centerLon += 2 * M_PI;
-                 }
-
-                 if ( overlayLatLonBox.crossesDateLine() ) {
-                     if (overlayLatLonBox.east() > 0 && overlayLatLonBox.west() > 0 && lon > overlayLatLonBox.west() ) lon -=  2 * M_PI;
-                     if (overlayLatLonBox.east() < 0 && overlayLatLonBox.west() < 0 && lon < overlayLatLonBox.east() ) lon +=  2 * M_PI;
+                     if ( lon < 0 && centerLon > 0 ) {
+                         centerLon -= 2 * M_PI;
+                     }
+                     if ( lon > 0 && centerLon < 0  ) {
+                         centerLon += 2 * M_PI;
+                     }
+                     if ( overlayLatLonBox.west() > 0 && overlayLatLonBox.east() > 0 && overlayLatLonBox.west() > overlayLatLonBox.east() && lon > 0 && lon < overlayLatLonBox.west() ) {
+                         centerLon -= 2 * M_PI;
+                     }
                  }
 
                  qreal rotatedLon = ( lon - centerLon ) * cosRotation - ( lat - centerLat ) * sinRotation + centerLon;
@@ -275,7 +303,7 @@ void MergedLayerDecorator::Private::renderGroundOverlays( QImage *tileImage, con
                  if ( overlay->latLonBox().contains( GeoDataCoordinates( rotatedLon, rotatedLat ) ) ) {
 
                      qreal px = ( GeoDataLatLonBox( 0, 0, rotatedLon, overlayLatLonBox.west() ).width() * lonToPixel );
-                     qreal py = (qreal) overlay->icon().height() - ( GeoDataLatLonBox( rotatedLat, overlayLatLonBox.south(), 0, 0 ).height() * latToPixel ) - 1;
+                     qreal py = qreal( overlay->icon().height() ) - ( GeoDataLatLonBox( rotatedLat, overlayLatLonBox.south(), 0, 0 ).height() * latToPixel ) - 1;
 
                      if ( px >= 0 && px < overlay->icon().width() && py >= 0 && py < overlay->icon().height() ) {
                          *scanLine = ImageF::pixelF( overlay->icon(), px, py );
