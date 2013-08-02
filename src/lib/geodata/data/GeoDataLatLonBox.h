@@ -18,8 +18,6 @@
 
 #include "GeoDataObject.h"
 #include "GeoDataCoordinates.h"
-#include "TileId.h"
-#include "GeoSceneTextureTile.h"
 
 #include "geodata_export.h"
 
@@ -156,12 +154,6 @@ class GEODATA_EXPORT GeoDataLatLonBox : public GeoDataObject
      * @return the smallest bounding box that contains the linestring.
      */
     static GeoDataLatLonBox fromLineString( const GeoDataLineString& lineString );
-
-    /**
-     * @brief Find the bounding box of an existing tileId
-     * @return the bounding box covered by the tileId
-     */
-    static GeoDataLatLonBox fromTileId( const TileId& tileId, const GeoSceneTextureTile *textureLayer );
 
     /**
      * @brief Creates a text string of the bounding box

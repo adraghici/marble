@@ -13,7 +13,6 @@
 #include "GeoDataLatLonBox.h"
 
 #include "MarbleDebug.h"
-#include "MarbleMath.h"
 #include "GeoDataCoordinates.h"
 #include "GeoDataLineString.h"
 
@@ -516,8 +515,12 @@ GeoDataLatLonBox GeoDataLatLonBox::toCircumscribedRectangle() const
     const qreal cosRotation = cos( rotation() );
     const qreal sinRotation = sin( rotation() );
 
-    const qreal centerLon = center().longitude() + ( GeoDataLatLonBox( 0, 0, center().longitude(), west() ).crossesDateLine() ? M_PI : 0 );
-    const qreal centerLat = center().latitude();
+    qreal centerLat = center().latitude();
+    qreal centerLon = center().longitude();
+    if ( GeoDataLatLonBox( 0, 0, center().longitude(), west() ).crossesDateLine() ) {
+        if ( !centerLon ) centerLon += M_PI;
+        else centerLon += 2 * M_PI;
+    }
 
     GeoDataLatLonBox box;
 
@@ -526,7 +529,7 @@ GeoDataLatLonBox GeoDataLatLonBox::toCircumscribedRectangle() const
     bool eastSet = false;
     bool westSet = false;
 
-    foreach ( GeoDataCoordinates coord, coordinates ) {
+    foreach ( const GeoDataCoordinates& coord, coordinates ) {
 
         const qreal lon = coord.longitude();
         const qreal lat = coord.latitude();
@@ -577,7 +580,7 @@ QString GeoDataLatLonBox::toString( GeoDataCoordinates::Unit unit ) const
     }
 
     return QString( "GeoDataLatLonBox::text(): Error in unit: %1\n" )
-    .arg( unit );
+	.arg( unit );
 }
 
 GeoDataLatLonBox& GeoDataLatLonBox::operator=( const GeoDataLatLonBox &other )
@@ -752,32 +755,6 @@ GeoDataLatLonBox GeoDataLatLonBox::fromLineString(  const GeoDataLineString& lin
     }
 
     return GeoDataLatLonBox( north, south, east, west );
-}
-
-GeoDataLatLonBox GeoDataLatLonBox::fromTileId( const TileId& tileId, const GeoSceneTextureTile *textureLayer )
-{
-
-    qreal radius = ( 1 << tileId.zoomLevel() ) * textureLayer->levelZeroColumns() / 2.0;
-
-    qreal lonLeft   = ( tileId.x() - radius ) / radius * M_PI;
-    qreal lonRight  = ( tileId.x() - radius + 1 ) / radius * M_PI;
-
-    radius = ( 1 << tileId.zoomLevel() ) * textureLayer->levelZeroRows() / 2.0;
-    qreal latTop = 0;
-    qreal latBottom = 0;
-
-    switch ( textureLayer->projection() ) {
-    case GeoSceneTiled::Equirectangular:
-        latTop = ( radius - tileId.y() ) / radius *  M_PI / 2.0;
-        latBottom = ( radius - tileId.y() - 1 ) / radius *  M_PI / 2.0;
-        break;
-    case GeoSceneTiled::Mercator:
-        latTop = gd( ( radius - tileId.y() ) / radius * M_PI );
-        latBottom = gd( ( radius - tileId.y() - 1 ) / radius * M_PI );
-        break;
-    }
-
-    return GeoDataLatLonBox( latTop, latBottom, lonRight, lonLeft );
 }
 
 bool GeoDataLatLonBox::isNull() const
