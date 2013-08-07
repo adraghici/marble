@@ -112,7 +112,7 @@ set(marblewidget_SRCS
     ViewportParams.cpp
     ViewParams.cpp
     Projections/AbstractProjection.cpp
-    Projections/CylindricalProjection.cpp
+	Projections/CylindricalProjection.cpp
     Projections/SphericalProjection.cpp
     Projections/EquirectProjection.cpp
     Projections/MercatorProjection.cpp
@@ -153,8 +153,6 @@ set(marblewidget_SRCS
     AbstractDataPluginModel.cpp
     AbstractDataPluginItem.cpp
     AbstractWorkerThread.cpp
-
-    WikipediaService.cpp
 
     PluginInterface.cpp
     DialogConfigurationInterface.cpp
@@ -362,7 +360,7 @@ else (APPLE AND QTONLY)
     TileCreatorDialog.h
     ViewportParams.h
     Projections/AbstractProjection.h
-    Projections/CylindricalProjection.h
+	Projections/CylindricalProjection.h
     Projections/SphericalProjection.h
     Projections/EquirectProjection.h
     Projections/MercatorProjection.h
@@ -440,8 +438,6 @@ else (APPLE AND QTONLY)
     AbstractDataPluginModel.h
     AbstractDataPluginItem.h
     AbstractWorkerThread.h
-
-    WikipediaService.h
 
     LatLonEdit.h
     MapWizard.h

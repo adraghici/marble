@@ -8,7 +8,6 @@ SET(CMAKE_COLOR_MAKEFILE ON)
 ####################################################
 # Generate the tiles with the tilecreator at compile time
 # if this option is set, srtm.jpg will not be installed but the generated tiles instead
-option(TILES_AT_COMPILETIME "Create the data for the Atlas map at compiletime" ON)
 option(QTONLY "Create Marble version without KDE dependencies" OFF)
 option(MOBILE "Create a Marble version optimized for handheld devices")
 
@@ -260,6 +259,7 @@ set( QT_USE_QTWEBKIT      ON )
 set( QT_USE_QTSVG         ON )
 set( QT_USE_QTDECLARATIVE ON )
 set( QT_USE_QTSQL         ON )
+set( QT_USE_QTDBUS        ON )
 include( ${QT_USE_FILE} )
 marble_set_package_properties( Qt4 PROPERTIES DESCRIPTION "cross-platform application framework" )
 marble_set_package_properties( Qt4 PROPERTIES URL "http://qt.digia.com/" )

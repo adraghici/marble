@@ -103,6 +103,8 @@ public:
 
     virtual qreal zValue() const { return 1.0e6; }
 
+    virtual QString runtimeTrace() const { return "CustomPaint"; }
+
 private:
     MarbleMap *const m_map;
 };
@@ -1226,9 +1228,9 @@ AngleUnit MarbleMap::defaultAngleUnit() const
     if ( GeoDataCoordinates::defaultNotation() == GeoDataCoordinates::Decimal ) {
         return DecimalDegree;
     } else if ( GeoDataCoordinates::defaultNotation() == GeoDataCoordinates::UTM ) {
-        return UTM;
+    	return UTM;
     } else if ( GeoDataCoordinates::defaultNotation() == GeoDataCoordinates::MGRS ) {
-        return MGRS;
+    	return MGRS;
     }
 
     return DMSDegree;

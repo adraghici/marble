@@ -208,6 +208,8 @@ StackedTile *MergedLayerDecorator::Private::createTile( const QVector<QSharedPoi
         }
     }
 
+    renderGroundOverlays( &resultImage, tiles );
+
     if ( m_showSunShading && !m_showCityLights ) {
         paintSunShading( &resultImage, id );
     }
@@ -215,8 +217,6 @@ StackedTile *MergedLayerDecorator::Private::createTile( const QVector<QSharedPoi
     if ( m_showTileId ) {
         paintTileId( &resultImage, id );
     }
-
-    renderGroundOverlays( &resultImage, tiles );
 
     return new StackedTile( id, resultImage, tiles );
 }
@@ -227,29 +227,7 @@ void MergedLayerDecorator::Private::renderGroundOverlays( QImage *tileImage, con
     /* All tiles are covering the same area. Pick one. */
     const TileId tileId = tiles.first()->id();
 
-    const GeoSceneTextureTile *textureLayer = findRelevantTextureLayers( tileId ).first();
-
-    qreal radius = ( 1 << tileId.zoomLevel() ) * textureLayer->levelZeroColumns() / 2.0;
-
-    qreal lonLeft   = ( tileId.x() - radius ) / radius * M_PI;
-    qreal lonRight  = ( tileId.x() - radius + 1 ) / radius * M_PI;
-
-    radius = ( 1 << tileId.zoomLevel() ) * textureLayer->levelZeroRows() / 2.0;
-    qreal latTop = 0;
-    qreal latBottom = 0;
-
-    switch ( textureLayer->projection() ) {
-    case GeoSceneTiled::Equirectangular:
-        latTop = ( radius - tileId.y() ) / radius *  M_PI / 2.0;
-        latBottom = ( radius - tileId.y() - 1 ) / radius *  M_PI / 2.0;
-        break;
-    case GeoSceneTiled::Mercator:
-        latTop = gd( ( radius - tileId.y() ) / radius * M_PI );
-        latBottom = gd( ( radius - tileId.y() - 1 ) / radius * M_PI );
-        break;
-    }
-
-    GeoDataLatLonBox tileLatLonBox = GeoDataLatLonBox( latTop, latBottom, lonRight, lonLeft );
+    GeoDataLatLonBox tileLatLonBox = tileId.toLatLonBox( findRelevantTextureLayers( tileId ).first() );
 
     /* Map the ground overlay to the image. */
     for ( int i =  0; i < m_groundOverlays.size(); ++i ) {
@@ -291,7 +269,9 @@ void MergedLayerDecorator::Private::renderGroundOverlays( QImage *tileImage, con
                          centerLon += 2 * M_PI;
                      }
                      if ( overlayLatLonBox.west() > 0 && overlayLatLonBox.east() > 0 && overlayLatLonBox.west() > overlayLatLonBox.east() && lon > 0 && lon < overlayLatLonBox.west() ) {
-                         centerLon -= 2 * M_PI;
+                         if ( ! ( lon < overlayLatLonBox.west() && lon > overlayLatLonBox.toCircumscribedRectangle().west() ) ) {
+                            centerLon -= 2 * M_PI;
+                         }
                      }
                  }
 
