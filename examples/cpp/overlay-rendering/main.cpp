@@ -1,13 +1,3 @@
-//
-// This file is part of the Marble Virtual Globe.
-//
-// This program is free software licensed under the GNU LGPL. You can
-// find a copy of this license in LICENSE.txt in the top directory of
-// the source code.
-//
-// Copyright 2013      Adrian Draghici <draghici.adrian.b@gmail.com>
-//
-
 #include <QDebug>
 #include <QFileInfo>
 #include <QApplication>
@@ -34,17 +24,19 @@ int main(int argc, char** argv) {
     // Create a Marble QWidget without a parent
     MarbleWidget *mapWidget = new MarbleWidget();
 
-    // Load the BlueMarble map
+    // Load the Satellite map
     mapWidget->setMapThemeId( "earth/bluemarble/bluemarble.dgml" );
 
-    GeoDataGroundOverlay *overlay = new GeoDataGroundOverlay;
-
+    // Create a bounding box from the given corner points
     GeoDataLatLonBox box( 55, 48, 14.5, 6, GeoDataCoordinates::Degree );
     box.setRotation( 0, GeoDataCoordinates::Degree );
 
+    // Create an overlay and assign the image to render and its bounding box to it
+    GeoDataGroundOverlay *overlay = new GeoDataGroundOverlay;
     overlay->setLatLonBox( box );
     overlay->setIcon( QImage( inputFile.absoluteFilePath() ) );
 
+    // Create a document as a container for the overlay
     GeoDataDocument *document = new GeoDataDocument();
     document->append( overlay );
 

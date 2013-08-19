@@ -264,10 +264,11 @@ include( ${QT_USE_FILE} )
 marble_set_package_properties( Qt4 PROPERTIES DESCRIPTION "cross-platform application framework" )
 marble_set_package_properties( Qt4 PROPERTIES URL "http://qt.digia.com/" )
 marble_set_package_properties( Qt4 PROPERTIES TYPE REQUIRED PURPOSE "core framework" )
-IF ( NOT QT_QTDECLARATIVE_LIBRARY )
+IF ( NOT QT_QTDECLARATIVE_FOUND )
   # older cmake versions have a FindQt4.cmake without support for declarative,
   # but the library may still be available
-  FIND_LIBRARY(QT_QTDECLARATIVE_LIBRARY NAMES QtDeclarative HINTS ${QT_LIBRARY_DIR})
+  FIND_PACKAGE(QtDeclarative)
+  include_directories(${QT_QTDECLARATIVE_INCLUDE_DIR})
 ENDIF()
 
 if(QTONLY)
@@ -318,7 +319,7 @@ endif(WIN32)
 include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${CMAKE_CURRENT_SOURCE_DIR}/src/lib
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/lib/Projections
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/lib/projections
   ${CMAKE_CURRENT_SOURCE_DIR}/src/lib/geodata
   ${CMAKE_CURRENT_SOURCE_DIR}/src/lib/geodata/data
   ${CMAKE_CURRENT_SOURCE_DIR}/src/lib/geodata/graphicsitem
