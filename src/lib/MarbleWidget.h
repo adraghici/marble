@@ -981,7 +981,7 @@ class MARBLE_EXPORT MarbleWidget : public QWidget
 
     void setInputEnabled( bool );
 
-    const TextureLayer *textureLayer() const;
+    TextureLayer *textureLayer() const;
 
     //@}
 

@@ -404,7 +404,7 @@ void MarbleWidget::removeLayer( LayerInterface *layer )
     d->m_map.removeLayer( layer );
 }
 
-const Marble::TextureLayer* MarbleWidget::textureLayer() const
+Marble::TextureLayer* MarbleWidget::textureLayer() const
 {
     return d->m_map.textureLayer();
 }

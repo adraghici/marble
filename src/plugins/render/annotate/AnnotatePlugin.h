@@ -30,6 +30,7 @@ class QNetworkReply;
 namespace Marble
 {
 class MarbleWidget;
+class TextureLayer;
 class PlacemarkTextAnnotation;
 class GeoDataDocument;
 class GeoDataLinearRing;

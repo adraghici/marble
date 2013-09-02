@@ -36,7 +36,7 @@ class SunLocator;
 class VectorComposer;
 class ViewportParams;
 
-class TextureLayer : public QObject, public LayerInterface
+class MARBLE_EXPORT TextureLayer : public QObject, public LayerInterface
 {
     Q_OBJECT
 

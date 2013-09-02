@@ -1302,7 +1302,7 @@ void MarbleMap::removeLayer( LayerInterface *layer )
 }
 
 // this method will only temporarily "pollute" the MarbleModel class
-const TextureLayer *MarbleMap::textureLayer() const
+TextureLayer *MarbleMap::textureLayer() const
 {
     return &d->m_textureLayer;
 }

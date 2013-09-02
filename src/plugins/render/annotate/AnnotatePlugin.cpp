@@ -14,7 +14,9 @@
 #include "MarbleDebug.h"
 #include "AbstractProjection.h"
 #include "AreaAnnotation.h"
+#include "EditGroundOverlayDialog.h"
 #include "GeoDataDocument.h"
+#include "GeoDataGroundOverlay.h"
 #include "GeoDataLatLonBox.h"
 #include "GeoDataParser.h"
 #include "GeoDataPlacemark.h"
@@ -26,8 +28,10 @@
 #include "KmlElementDictionary.h"
 #include "MarbleDirs.h"
 #include "MarbleModel.h"
+#include "MarblePlacemarkModel.h"
 #include "MarbleWidget.h"
 #include "PlacemarkTextAnnotation.h"
+#include "TextureLayer.h"
 
 #include <QFileDialog>
 #include <QAction>
@@ -35,6 +39,7 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QMessageBox>
+#include <QSortFilterProxyModel>
 
 namespace Marble
 {
@@ -426,6 +431,23 @@ bool AnnotatePlugin::eventFilter(QObject* watched, QEvent* event)
                                                      GeoDataCoordinates::Radian );
     if( !isOnGlobe ) {
         return false;
+    }
+
+    QSortFilterProxyModel groundOverlayModel;
+    groundOverlayModel.setSourceModel( m_marbleWidget->model()->groundOverlayModel() );
+    groundOverlayModel.setDynamicSortFilter( true );
+    groundOverlayModel.setSortRole( MarblePlacemarkModel::PopularityIndexRole );
+    groundOverlayModel.sort( 0, Qt::AscendingOrder );
+
+    if ( mouseEvent->button() == Qt::LeftButton && event->type() == QEvent::MouseButtonRelease ) {
+        for ( int i = 0; i < groundOverlayModel.rowCount(); ++i ) {
+            QModelIndex index = groundOverlayModel.index( i, 0 );
+            GeoDataGroundOverlay *overlay = dynamic_cast<GeoDataGroundOverlay*>( qvariant_cast<GeoDataObject*>( index.data( MarblePlacemarkModel::ObjectPointerRole ) ) );
+            if ( overlay->latLonBox().contains( GeoDataCoordinates( lon, lat ) ) ) {
+                EditGroundOverlayDialog *dialog = new EditGroundOverlayDialog( overlay, m_marbleWidget->textureLayer() );
+                dialog->exec();
+            }
+        }
     }
 
     // handle easily the mousemove

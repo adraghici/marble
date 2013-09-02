@@ -4,6 +4,7 @@ INCLUDE_DIRECTORIES(
  ${CMAKE_CURRENT_SOURCE_DIR}
  ${CMAKE_CURRENT_BINARY_DIR}
  ${CMAKE_SOURCE_DIR}/src/lib/geodata/handlers/kml
+ ${CMAKE_SOURCE_DIR}/src/lib/layers
  ${QT_INCLUDE_DIR}
 )
 INCLUDE(${QT_USE_FILE})
@@ -11,6 +12,8 @@ INCLUDE(${QT_USE_FILE})
 set( annotate_SRCS
   AnnotatePlugin.cpp
   AreaAnnotation.cpp
+  EditGroundOverlayDialog.cpp
+  EditGroundOverlayDialog.ui
   GeoWidgetBubble.cpp
   PlacemarkTextAnnotation.cpp
   SceneGraphicsItem.cpp
