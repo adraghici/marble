@@ -87,6 +87,7 @@ class AnnotatePlugin :  public RenderPlugin
 
 signals:
     void placemarkAdded();
+    void overlayAdded();
     void itemRemoved();
 
 public slots:
@@ -94,7 +95,10 @@ public slots:
 
     void setAddingPlacemark( bool );
     void setDrawingPolygon( bool );
+    void setAddingOverlay( bool );
     void setRemovingItems( bool );
+
+    void addOverlay();
 
     //    void receiveNetworkReply( QNetworkReply* );
     //    void downloadOsmFile();
@@ -124,6 +128,7 @@ private:
 
     bool m_addingPlacemark;
     bool m_drawingPolygon;
+    bool m_addingOverlay;
     bool m_removingItem;
     //    QNetworkAccessManager* m_networkAccessManager;
     //    QErrorMessage m_errorMessage;

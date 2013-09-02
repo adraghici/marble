@@ -97,5 +97,6 @@
         <file>icons/draw-placemark.png</file>
         <file>icons/draw-polygon.png</file>
         <file>icons/remove.png</file>
+        <file>icons/draw-overlay.png</file>
     </qresource>
 </RCC>

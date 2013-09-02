@@ -235,9 +235,29 @@ void AnnotatePlugin::setDrawingPolygon( bool enabled )
     }
 }
 
+void AnnotatePlugin::setAddingOverlay( bool enabled )
+{
+    m_addingOverlay = enabled;
+}
+
 void AnnotatePlugin::setRemovingItems( bool enabled )
 {
     m_removingItem = enabled;
+}
+
+void AnnotatePlugin::addOverlay()
+{
+    if ( !m_addingOverlay ) {
+        return;
+    }
+
+    GeoDataGroundOverlay *overlay = new GeoDataGroundOverlay();
+    EditGroundOverlayDialog *dialog = new EditGroundOverlayDialog( overlay, m_marbleWidget->textureLayer() );
+    dialog->exec();
+
+    m_marbleWidget->model()->treeModel()->addFeature( m_annotationDocument, overlay );
+
+    emit overlayAdded();
 }
 
 //void AnnotatePlugin::receiveNetworkReply( QNetworkReply *reply )
@@ -444,8 +464,13 @@ bool AnnotatePlugin::eventFilter(QObject* watched, QEvent* event)
             QModelIndex index = groundOverlayModel.index( i, 0 );
             GeoDataGroundOverlay *overlay = dynamic_cast<GeoDataGroundOverlay*>( qvariant_cast<GeoDataObject*>( index.data( MarblePlacemarkModel::ObjectPointerRole ) ) );
             if ( overlay->latLonBox().contains( GeoDataCoordinates( lon, lat ) ) ) {
-                EditGroundOverlayDialog *dialog = new EditGroundOverlayDialog( overlay, m_marbleWidget->textureLayer() );
-                dialog->exec();
+                if ( m_removingItem ) {
+                    m_marbleWidget->model()->treeModel()->removeFeature( overlay );
+                }
+                else {
+                    EditGroundOverlayDialog *dialog = new EditGroundOverlayDialog( overlay, m_marbleWidget->textureLayer() );
+                    dialog->exec();
+                }
             }
         }
     }
@@ -471,7 +496,7 @@ bool AnnotatePlugin::eventFilter(QObject* watched, QEvent* event)
                     const int result = QMessageBox::question( m_marbleWidget,
                                                               QObject::tr( "Remove current item" ),
                                                               QObject::tr( "Are you sure you want to remove the current item?" ),
-                                                              QMessageBox::Yes | QMessageBox::Yes );
+                                                              QMessageBox::Yes | QMessageBox::Cancel );
 
                     if ( result == QMessageBox::Yes ) {
                         m_selectedItem = 0;
@@ -479,8 +504,8 @@ bool AnnotatePlugin::eventFilter(QObject* watched, QEvent* event)
                         m_marbleWidget->model()->treeModel()->removeFeature( item->feature() );
                         delete item->feature();
                         delete item;
-                        emit itemRemoved();
                     }
+                    emit itemRemoved();
                     return true;
                 }
                 else {
@@ -565,6 +590,17 @@ void AnnotatePlugin::setupActions(MarbleWidget* widget)
         connect( drawPolygon, SIGNAL(toggled(bool)),
                  this, SLOT(setDrawingPolygon(bool)) );
 
+        QAction* addOverlay = new QAction( this );
+        addOverlay->setToolTip( tr("Add Ground Overlay") );
+        addOverlay->setCheckable( true );
+        addOverlay->setIcon( QIcon( ":/icons/draw-overlay.png") );
+        connect( addOverlay, SIGNAL(toggled(bool)),
+                 this, SLOT(setAddingOverlay(bool)) );
+        connect( addOverlay, SIGNAL(toggled(bool)),
+                 this, SLOT(addOverlay()) );
+        connect( this, SIGNAL(overlayAdded()),
+                 addOverlay, SLOT(toggle()) );
+
         QAction* removeItem = new QAction( this );
         removeItem->setToolTip( tr("Remove Item") );
         removeItem->setCheckable( true );
@@ -610,6 +646,7 @@ void AnnotatePlugin::setupActions(MarbleWidget* widget)
         group->addAction( beginSeparator );
         group->addAction( addPlacemark );
         group->addAction( drawPolygon );
+        group->addAction( addOverlay );
         group->addAction( removeItem );
         group->addAction( loadAnnotationFile );
         group->addAction( saveAnnotationFile );
