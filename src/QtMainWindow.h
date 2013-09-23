@@ -7,6 +7,7 @@
 //
 // Copyright 2006-2010 Torsten Rahn <tackat@kde.org>
 // Copyright 2007      Inge Wallin  <ingwa@kde.org>
+// Copyright 2010-2013 Bernhard Beschow <bbeschow@cs.tu-berlin.de>
 //
 
 
@@ -33,21 +34,10 @@ class SunControlWidget;
 class TimeControlWidget;
 class QtMarbleConfigDialog;
 class DownloadRegionDialog;
-class RoutingWidget;
-class StackableWindow;
-class GoToDialog;
 
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
-
-#ifdef Q_WS_MAEMO_5
-    enum Orientation {
-        OrientationAutorotate,
-        OrientationLandscape,
-        OrientationPortrait
-    };
-#endif
 
 public:
     explicit MainWindow(const QString& marbleDataPath = QString(),
@@ -61,9 +51,7 @@ public:
         return m_controlView->marbleWidget();
     }
 
-#ifdef Q_WS_MAEMO_5
-    Orientation orientation() const;
-#endif
+    void addGeoDataFile( const QString &fileName );
 
 protected:
     void  closeEvent(QCloseEvent *event);
@@ -115,9 +103,6 @@ private Q_SLOTS:
 
     // Settings Menu
     void  showFullScreen( bool );
-#ifdef Q_WS_MAEMO_5
-    void  setOrientation( Orientation orientation );
-#endif
     void  showStatusBar( bool );
     void  setupStatusBar();
     void  setupDownloadProgressBar();
@@ -138,15 +123,7 @@ private Q_SLOTS:
     void  showBookmarks( bool show );
 
     // Download region dialog
-    void  connectDownloadRegionDialog();
-    void  disconnectDownloadRegionDialog();
     void  downloadRegion();
-
-    // Small screen devices specific slots
-    void showMapViewDialog();
-    void showRoutingDialog();
-    void showTrackingDialog();
-    void showGoToDialog();
 
     void showZoomLevel( bool show );
 
@@ -154,9 +131,6 @@ private Q_SLOTS:
     void downloadJobRemoved();
 
 private:
-    void setupZoomButtons();
-    void initializeTrackingWidget();
-
     ControlView *m_controlView;
     SunControlWidget* m_sunControlDialog;
     TimeControlWidget* m_timeControlDialog;
@@ -228,19 +202,8 @@ private:
     QAction *m_toggleBookmarkDisplayAct;
     QAction *m_manageBookmarksAct;
 
-    // Small screen devices
-    QAction *m_showMapViewDialogAction;
-    QAction *m_toggleRoutingTabAction;
-    QAction *m_showTrackingDialogAction;
-
-    QDialog *m_mapViewWindow;
-    StackableWindow *m_routingWindow;
-    StackableWindow *m_trackingWindow;
-    GoToDialog *m_gotoDialog;
-
-    RoutingWidget *m_routingWidget;
-
     QString m_lastFileOpenPath;
+    QStringList m_commandlineFilePaths;
 };
 
 } // namespace Marble

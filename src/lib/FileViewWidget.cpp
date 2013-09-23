@@ -13,7 +13,6 @@
 
 // Qt
 #include <QSortFilterProxyModel>
-#include <QFileDialog>
 
 // Marble
 #include "GeoDataContainer.h"
@@ -112,7 +111,7 @@ void FileViewWidgetPrivate::saveFile()
 {
     QModelIndex index = m_fileViewUi.m_treeView->selectionModel()->selectedRows().first();
     GeoDataObject *object
-        = qVariantValue<GeoDataObject*>( index.model()->data( index, MarblePlacemarkModel::ObjectPointerRole ) );
+        = index.model()->data( index, MarblePlacemarkModel::ObjectPointerRole ).value<GeoDataObject*>();
     GeoDataDocument *document = dynamic_cast<GeoDataDocument*>(object);
     if ( document ) {
         m_fileManager->saveFile( QFileDialog::getSaveFileName( q, "Save To" ), document );
@@ -123,10 +122,10 @@ void FileViewWidgetPrivate::closeFile()
 {
     QModelIndex index = m_fileViewUi.m_treeView->selectionModel()->selectedRows().first();
     GeoDataObject *object
-        = qVariantValue<GeoDataObject*>( index.model()->data( index, MarblePlacemarkModel::ObjectPointerRole ) );
+        = index.model()->data( index, MarblePlacemarkModel::ObjectPointerRole ).value<GeoDataObject*>();
     GeoDataDocument *document = dynamic_cast<GeoDataDocument*>(object);
     if ( document ) {
-        m_fileManager->closeFile( document );
+        m_fileManager->saveFile( QFileDialog::getSaveFileName( q, "Save To" ), document );
     }
 }
 
@@ -136,7 +135,7 @@ void FileViewWidgetPrivate::enableFileViewActions()
     if ( !m_fileViewUi.m_treeView->selectionModel()->selectedRows().isEmpty() ) {
         QModelIndex index = m_fileViewUi.m_treeView->selectionModel()->selectedRows().first();
         GeoDataObject *object
-            = qVariantValue<GeoDataObject*>( index.model()->data( index, MarblePlacemarkModel::ObjectPointerRole ) );
+            = index.model()->data( index, MarblePlacemarkModel::ObjectPointerRole ).value<GeoDataObject*>();
         GeoDataDocument *document = dynamic_cast<GeoDataDocument*>(object);
         if ( document ) {
             tmp = document->documentRole() == Marble::UserDocument;
@@ -152,7 +151,7 @@ void FileViewWidget::mapCenterOnTreeViewModel( const QModelIndex &index )
         return;
     }
     GeoDataObject *object
-        = qVariantValue<GeoDataObject*>( index.model()->data( index, MarblePlacemarkModel::ObjectPointerRole ) );
+        = index.model()->data( index, MarblePlacemarkModel::ObjectPointerRole ).value<GeoDataObject*>();
     if ( dynamic_cast<GeoDataPlacemark*>(object) )
     {
         GeoDataPlacemark *placemark = static_cast<GeoDataPlacemark*>(object);

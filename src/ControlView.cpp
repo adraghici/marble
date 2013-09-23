@@ -86,7 +86,7 @@ ControlView::~ControlView()
 
 QString ControlView::applicationVersion()
 {
-    return "1.6.20 (development snapshot)";
+    return "1.6.21 (development snapshot)";
 }
 
 MapThemeManager *ControlView::mapThemeManager()
@@ -127,16 +127,9 @@ void ControlView::moveDown()
 QString ControlView::defaultMapThemeId() const
 {
     QStringList fallBackThemes;
-    bool const smallScreen = MarbleGlobal::getInstance()->profiles() & MarbleGlobal::SmallScreen;
-    if ( smallScreen ) {
-      fallBackThemes << "earth/openstreetmap/openstreetmap.dgml";
-      fallBackThemes << "earth/srtm/srtm.dgml";
-      fallBackThemes << "earth/bluemarble/bluemarble.dgml";
-    } else {
       fallBackThemes << "earth/srtm/srtm.dgml";
       fallBackThemes << "earth/bluemarble/bluemarble.dgml";
       fallBackThemes << "earth/openstreetmap/openstreetmap.dgml";
-    }
 
     const QStringList installedThemes = m_mapThemeManager->mapThemeIds();
 
@@ -356,7 +349,7 @@ void ControlView::printDrivingInstructions( QTextDocument &document, QString &te
     text += "<tr><th>No.</th><th>Distance</th><th>Instruction</th></tr>";
     for ( int i=0; i<routingModel->rowCount(); ++i ) {
         QModelIndex index = routingModel->index(i, 0);
-        GeoDataCoordinates coordinates = qVariantValue<GeoDataCoordinates>( index.data( RoutingModel::CoordinateRole ) );
+        GeoDataCoordinates coordinates = index.data( RoutingModel::CoordinateRole ).value<GeoDataCoordinates>();
         GeoDataLineString accumulator;
         for (int k=0; k<total.size(); ++k) {
             accumulator << total.at(k);
@@ -378,7 +371,7 @@ void ControlView::printDrivingInstructions( QTextDocument &document, QString &te
         /** @todo: support localization */
         text += " km</td><td valign=\"middle\">";
 
-        QPixmap instructionIcon = qVariantValue<QPixmap>( index.data( Qt::DecorationRole ) );
+        QPixmap instructionIcon = index.data( Qt::DecorationRole ).value<QPixmap>();
         if ( !instructionIcon.isNull() ) {
             QString uri = QString("marble://turnIcon%1.png").arg(i);
             document.addResource( QTextDocument::ImageResource, QUrl( uri ), QVariant( instructionIcon ) );

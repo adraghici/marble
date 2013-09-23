@@ -13,6 +13,7 @@
 #include "MarbleDeclarativeWidget.h"
 #include "MarbleModel.h"
 #include "MarblePlacemarkModel.h"
+#include "SearchRunnerManager.h"
 #include "ViewportParams.h"
 
 Search::Search( QObject* parent ) : QObject( parent ),
@@ -51,8 +52,7 @@ void Search::setPlacemarkDelegate( QDeclarativeComponent* delegate )
 void Search::find( const QString &searchTerm )
 {
     if ( !m_runnerManager && m_marbleWidget ) {
-        m_runnerManager = new Marble::MarbleRunnerManager( m_marbleWidget->model()->pluginManager(), this );
-        m_runnerManager->setModel( m_marbleWidget->model() );
+        m_runnerManager = new Marble::SearchRunnerManager( m_marbleWidget->model(), this );
         connect( m_runnerManager, SIGNAL(searchFinished(QString)),
                  this, SLOT(handleSearchResult()) );
         connect( m_runnerManager, SIGNAL(searchResultChanged(QAbstractItemModel*)),
@@ -109,7 +109,7 @@ void Search::updatePlacemarks()
         while ( iter != m_placemarks.constEnd() ) {
             qreal x(0), y(0);
             QVariant position = m_searchResult->data( m_searchResult->index( iter.key() ), Marble::MarblePlacemarkModel::CoordinateRole );
-            Marble::GeoDataCoordinates const coordinates = qVariantValue<Marble::GeoDataCoordinates>( position );
+            Marble::GeoDataCoordinates const coordinates = position.value<Marble::GeoDataCoordinates>();
             bool const visible = onEarth && m_marbleWidget->viewport()->screenCoordinates( coordinates.longitude( Marble::GeoDataCoordinates::Radian ),
                                                                                            coordinates.latitude( Marble::GeoDataCoordinates::Radian), x, y );
             QDeclarativeItem* item = iter.value();
@@ -168,7 +168,7 @@ void Search::handleSearchResult()
     for ( int i = 0; i < m_searchResult->rowCount(); ++i ) {
         QVariant data = m_searchResult->index( i, 0 ).data( Marble::MarblePlacemarkModel::CoordinateRole );
         if ( !data.isNull() ) {
-            placemarks << qVariantValue<Marble::GeoDataCoordinates>( data );
+            placemarks << data.value<Marble::GeoDataCoordinates>();
         }
     }
 

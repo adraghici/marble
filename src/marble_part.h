@@ -20,6 +20,7 @@
 #include <kmenu.h>
 #include <kurl.h>
 #include "MarbleGlobal.h"
+#include "cloudsync/CloudSyncManager.h"
 #include <krecentfilesaction.h>
 
 class KAboutData;
@@ -135,8 +136,6 @@ class MarblePart: public KParts::ReadOnlyPart
     void  setupStatusBar();
     void  showNewStuffDialog();
     void  showUploadNewStuffDialog();
-    void  connectDownloadRegionDialog();
-    void  disconnectDownloadRegionDialog();
     void  showDownloadRegionDialog();
     void  downloadRegion();
     void  showStatusBarContextMenu( const QPoint& pos );

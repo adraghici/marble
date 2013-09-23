@@ -7,6 +7,7 @@
 //
 // Copyright 2006-2010 Torsten Rahn        <tackat@kde.org>
 // Copyright 2007      Inge Wallin         <ingwa@kde.org>
+// Copyright 2011-2013 Bernhard Beschow    <bbeschow@cs.tu-berlin.de>
 // Copyright 2012      Illya Kovalevskyy   <illya.kovalevskyy@gmail.com>
 // Copyright 2012      Mohammed Nafees     <nafees.technocool@gmail.com>
 //
@@ -75,17 +76,10 @@
 #include "PluginManager.h"
 #include "MapThemeDownloadDialog.h"
 #include "MapWizard.h"
-#include "StackableWindow.h"
 #include "GoToDialog.h"
 #include "MarbleWidgetInputHandler.h"
 #include "Planet.h"
-
-// For zoom buttons on Maemo
-#ifdef Q_WS_MAEMO_5
-#include <QX11Info>
-#include <X11/Xlib.h>
-#include <X11/Xatom.h>
-#endif // Q_WS_MAEMO_5
+#include "cloudsync/CloudSyncManager.h"
 
 namespace
 {
@@ -106,16 +100,8 @@ MainWindow::MainWindow(const QString& marbleDataPath, const QVariantMap& cmdLine
         m_panelMenu( 0 ),
         m_downloadRegionAction( 0 ),
         m_osmEditAction( 0 ),
-        m_zoomLabel( 0 ),
-        m_mapViewWindow( 0 ),
-        m_routingWindow( 0 ),
-        m_trackingWindow( 0 ),
-        m_gotoDialog( 0 ),
-        m_routingWidget( 0 )
+        m_zoomLabel( 0 )
 {
-#ifdef Q_WS_MAEMO_5
-    setAttribute( Qt::WA_Maemo5StackedWindow );
-#endif // Q_WS_MAEMO_5
     setUpdatesEnabled( false );
 
     QString selectedPath = marbleDataPath.isEmpty() ? readMarbleDataPath() : marbleDataPath;
@@ -162,11 +148,28 @@ MainWindow::MainWindow(const QString& marbleDataPath, const QVariantMap& cmdLine
                               Q_ARG(QVariantMap, cmdLineSettings));
 }
 
+void MainWindow::addGeoDataFile( const QString &fileName )
+{
+    QFileInfo file( fileName );
+
+    if ( !file.exists() )
+        return;
+
+    // delay file loading to initObject(), such that restoring view from previous session in readSettings()
+    // doesn't interfere with focusing on these files
+    m_commandlineFilePaths << file.absoluteFilePath();
+}
+
 void MainWindow::initObject(const QVariantMap& cmdLineSettings)
 {
     QCoreApplication::processEvents ();
     setupStatusBar();
     readSettings(cmdLineSettings);
+
+    foreach ( const QString &path, m_commandlineFilePaths ) {
+        m_controlView->marbleModel()->addGeoDataFile( path );
+    }
+    m_commandlineFilePaths.clear();
 }
 
 void MainWindow::createActions()
@@ -307,36 +310,6 @@ void MainWindow::createActions()
 
 void MainWindow::createMenus( const QList<QAction*> &panelActions )
 {
-    if ( MarbleGlobal::getInstance()->profiles() & MarbleGlobal::SmallScreen ) {
-        // Do not create too many menu entries on a MID
-
-        menuBar()->addAction( m_workOfflineAct );
-        //menuBar()->addAction( m_sideBarAct );
-        /** @todo: Full screen cannot be left on Maemo currently (shortcuts not working) */
-        //menuBar()->addAction( m_fullScreenAct );
-        menuBar()->addAction( m_downloadRegionAction );
-
-        m_showMapViewDialogAction = menuBar()->addAction( tr( "Map View" ) );
-        connect( m_showMapViewDialogAction, SIGNAL(triggered(bool)),
-                 this, SLOT(showMapViewDialog()) );
-
-        Q_ASSERT( panelActions.size() == 1 );
-        menuBar()->addAction( panelActions[0] );
-        m_toggleRoutingTabAction = menuBar()->addAction( tr( "Routing" ) );
-        connect( m_toggleRoutingTabAction, SIGNAL(triggered(bool)),
-                 this, SLOT(showRoutingDialog()) );
-        m_showTrackingDialogAction = menuBar()->addAction( tr( "Tracking" ) );
-        connect( m_showTrackingDialogAction, SIGNAL(triggered()),
-                 this, SLOT(showTrackingDialog()) );
-        QAction *goToAction = menuBar()->addAction( tr( "&Go To...") );
-        connect( goToAction, SIGNAL(triggered()),
-                 this, SLOT(showGoToDialog()) );
-
-        setupZoomButtons();
-
-        menuBar()->addAction( m_manageBookmarksAct );
-        menuBar()->addAction( m_aboutMarbleAct );
-    } else {
         m_fileMenu = menuBar()->addMenu(tr("&File"));
         m_fileMenu->addAction(m_openAct);
         m_fileMenu->addAction(m_downloadAct);
@@ -392,7 +365,6 @@ void MainWindow::createMenus( const QList<QAction*> &panelActions )
             connect( (*it), SIGNAL(actionGroupsChanged()),
                      this, SLOT(createPluginMenus()) );
         }
-    }
 }
 
 void MainWindow::createPluginsMenus()
@@ -655,34 +627,6 @@ void MainWindow::showFullScreen( bool isChecked )
 
     m_fullScreenAct->setChecked( isChecked ); // Sync state with the GUI
 }
-
-#ifdef Q_WS_MAEMO_5
-void MainWindow::setOrientation( Orientation orientation )
-{
-    switch ( orientation ) {
-    case OrientationAutorotate:
-       setAttribute( Qt::WA_Maemo5AutoOrientation );
-       break;
-    case OrientationLandscape:
-       setAttribute( Qt::WA_Maemo5LandscapeOrientation );
-       break;
-    case OrientationPortrait:
-       setAttribute( Qt::WA_Maemo5PortraitOrientation );
-       break;
-    }
-}
-
-MainWindow::Orientation MainWindow::orientation() const
-{
-    if ( testAttribute( Qt::WA_Maemo5LandscapeOrientation ) )
-        return OrientationLandscape;
-
-    if ( testAttribute( Qt::WA_Maemo5PortraitOrientation ) )
-        return OrientationPortrait;
-
-    return OrientationAutorotate;
-}
-#endif // Q_WS_MAEMO_5
 
 void MainWindow::copyCoordinates()
 {
@@ -1015,10 +959,6 @@ void MainWindow::readSettings(const QVariantMap& overrideSettings)
          resize(settings.value("size", QSize(640, 480)).toSize());
          move(settings.value("pos", QPoint(200, 200)).toPoint());
          showFullScreen(settings.value("fullScreen", false ).toBool());
-#ifdef Q_WS_MAEMO_5
-         const Orientation orientation = (Orientation)settings.value( "orientation", (int)OrientationLandscape ).toInt();
-         setOrientation( orientation );
-#endif // Q_WS_MAEMO_5
          showStatusBar(settings.value("statusBar", false ).toBool());
          show();
          showClouds(settings.value("showClouds", true ).toBool());
@@ -1041,10 +981,8 @@ void MainWindow::readSettings(const QVariantMap& overrideSettings)
          }
          mDebug() << Q_FUNC_INFO << "mapThemeId:" << mapThemeId;
          m_controlView->marbleWidget()->setMapThemeId( mapThemeId );
-         bool const smallScreen = MarbleGlobal::getInstance()->profiles() & MarbleGlobal::SmallScreen;
-         int const defaultProjection = smallScreen ? Mercator : Spherical;
          m_controlView->marbleWidget()->setProjection(
-            (Projection)(settings.value("projection", defaultProjection ).toInt())
+            (Projection)(settings.value("projection", Spherical ).toInt())
          );
 
          // Set home position
@@ -1188,13 +1126,7 @@ void MainWindow::readSettings(const QVariantMap& overrideSettings)
 
     settings.beginGroup( "Tracking" );
     if ( settings.contains( "autoCenter" ) || settings.contains( "recenterMode" ) ) {
-        CurrentLocationWidget* trackingWidget = 0;
-        if ( smallScreen ) {
-            initializeTrackingWidget();
-            trackingWidget = qobject_cast<CurrentLocationWidget*>( m_trackingWindow->centralWidget() );
-        } else {
-            trackingWidget = m_controlView->currentLocationWidget();
-        }
+        CurrentLocationWidget* trackingWidget = m_controlView->currentLocationWidget();
         Q_ASSERT( trackingWidget );
         trackingWidget->setRecenterMode( settings.value( "recenterMode", 0 ).toInt() );
         trackingWidget->setAutoZoom( settings.value( "autoZoom", false ).toBool() );
@@ -1210,6 +1142,15 @@ void MainWindow::readSettings(const QVariantMap& overrideSettings)
      settings.beginGroup( "Navigation" );
      m_controlView->setExternalMapEditor( settings.value( "externalMapEditor", "" ).toString() );
      settings.endGroup();
+
+     settings.beginGroup( "CloudSync" );
+     CloudSyncManager* cloudSyncManager = m_controlView->marbleWidget()->model()->cloudSyncManager();
+     cloudSyncManager->setSyncEnabled( settings.value( "enableSync", false ).toBool() );
+     cloudSyncManager->setRouteSyncEnabled( settings.value( "syncRoutes", true ).toBool() );
+     cloudSyncManager->setOwncloudServer( settings.value( "owncloudServer", "" ).toString() );
+     cloudSyncManager->setOwncloudUsername( settings.value( "owncloudUsername", "" ).toString() );
+     cloudSyncManager->setOwncloudPassword( settings.value( "owncloudPassword", "" ).toString() );
+     settings.endGroup();
 }
 
 void MainWindow::writeSettings()
@@ -1220,9 +1161,6 @@ void MainWindow::writeSettings()
          settings.setValue( "size", size() );
          settings.setValue( "pos", pos() );
          settings.setValue( "fullScreen", m_fullScreenAct->isChecked() );
-#ifdef Q_WS_MAEMO_5
-         settings.setValue( "orientation", (int)orientation() );
-#endif // Q_WS_MAEMO_5
          settings.setValue( "statusBar", m_statusBarAct->isChecked() );
          settings.setValue( "showClouds", m_showCloudsAct->isChecked() );
          settings.setValue( "workOffline", m_workOfflineAct->isChecked() );
@@ -1311,12 +1249,7 @@ void MainWindow::writeSettings()
      settings.endGroup();
 
      settings.beginGroup( "Tracking" );
-     CurrentLocationWidget* trackingWidget = 0;
-     if ( m_trackingWindow ) {
-         trackingWidget = qobject_cast<CurrentLocationWidget*>( m_trackingWindow->centralWidget() );
-     } else {
-         trackingWidget = m_controlView->currentLocationWidget();
-     }
+     CurrentLocationWidget* trackingWidget = m_controlView->currentLocationWidget();
      if ( trackingWidget ) {
          // Can be null due to lazy initialization
          settings.setValue( "recenterMode", trackingWidget->recenterMode() );
@@ -1325,7 +1258,6 @@ void MainWindow::writeSettings()
          settings.setValue( "lastTrackOpenPath", trackingWidget->lastOpenPath() );
          settings.setValue( "lastTrackSavePath", trackingWidget->lastSavePath() );
      }
-
      settings.endGroup();
 
      // The config dialog has to write settings.
@@ -1391,6 +1323,13 @@ void MainWindow::updateSettings()
     m_controlView->marbleWidget()->setProxy( m_configDialog->proxyUrl(), m_configDialog->proxyPort(), m_configDialog->user(), m_configDialog->password() );
     */
 
+    CloudSyncManager* cloudSyncManager = m_controlView->marbleWidget()->model()->cloudSyncManager();
+    cloudSyncManager->setSyncEnabled( m_configDialog->syncEnabled() );
+    cloudSyncManager->setRouteSyncEnabled( m_configDialog->syncRoutes() );
+    cloudSyncManager->setOwncloudServer( m_configDialog->owncloudServer() );
+    cloudSyncManager->setOwncloudUsername( m_configDialog->owncloudUsername() );
+    cloudSyncManager->setOwncloudPassword( m_configDialog->owncloudPassword() );
+
     m_controlView->marbleWidget()->update();
 }
 
@@ -1403,9 +1342,6 @@ void MainWindow::showDownloadRegionDialog()
         // signal, leading to a too early disconnect.
         connect( m_downloadRegionDialog, SIGNAL(accepted()), SLOT(downloadRegion()));
         connect( m_downloadRegionDialog, SIGNAL(applied()), SLOT(downloadRegion()));
-        connect( m_downloadRegionDialog, SIGNAL(shown()), SLOT(connectDownloadRegionDialog()));
-        connect( m_downloadRegionDialog, SIGNAL(hidden()),
-                 SLOT(disconnectDownloadRegionDialog()));
     }
     // FIXME: get allowed range from current map theme
     m_downloadRegionDialog->setAllowedTileLevelRange( 0, 16 );
@@ -1418,24 +1354,6 @@ void MainWindow::showDownloadRegionDialog()
     m_downloadRegionDialog->show();
     m_downloadRegionDialog->raise();
     m_downloadRegionDialog->activateWindow();
-}
-
-// connect to expensive slots, only needed when the non modal dialog is show
-void MainWindow::connectDownloadRegionDialog()
-{
-    connect( m_controlView->marbleWidget(), SIGNAL(visibleLatLonAltBoxChanged(GeoDataLatLonAltBox)),
-             m_downloadRegionDialog, SLOT(setVisibleLatLonAltBox(GeoDataLatLonAltBox)));
-    connect( m_controlView->marbleWidget(), SIGNAL(themeChanged(QString)),
-             m_downloadRegionDialog, SLOT(updateTextureLayer()));
-}
-
-// disconnect from expensive slots, not needed when dialog is hidden
-void MainWindow::disconnectDownloadRegionDialog()
-{
-    disconnect( m_controlView->marbleWidget(), SIGNAL(visibleLatLonAltBoxChanged(GeoDataLatLonAltBox)),
-                m_downloadRegionDialog, SLOT(setVisibleLatLonAltBox(GeoDataLatLonAltBox)));
-    disconnect( m_controlView->marbleWidget(), SIGNAL(themeChanged(QString)),
-                m_downloadRegionDialog, SLOT(updateTextureLayer()));
 }
 
 void MainWindow::downloadRegion()
@@ -1457,102 +1375,10 @@ void MainWindow::printMapScreenShot()
 #endif
 }
 
-void MainWindow::showMapViewDialog()
-{
-    if( !m_mapViewWindow ) {
-        m_mapViewWindow = new QDialog( this );
-        m_mapViewWindow->setWindowTitle( tr( "Map View - Marble" ) );
-
-        QVBoxLayout *layout = new QVBoxLayout;
-        m_mapViewWindow->setLayout( layout );
-
-        MapViewWidget *mapViewWidget = new MapViewWidget( m_mapViewWindow );
-        mapViewWidget->setMarbleWidget( m_controlView->marbleWidget(), m_controlView->mapThemeManager() );
-        layout->addWidget( mapViewWidget );
-    }
-
-    m_mapViewWindow->show();
-    m_mapViewWindow->raise();
-    m_mapViewWindow->activateWindow();
-}
-
-void MainWindow::showRoutingDialog()
-{
-    if( !m_routingWindow ) {
-        m_routingWindow = new StackableWindow( this );
-        m_routingWindow->setWindowTitle( tr( "Routing - Marble" ) );
-
-        m_routingWidget = new RoutingWidget( m_controlView->marbleWidget(), m_routingWindow );
-        m_routingWidget->setShowDirectionsButtonVisible( true );
-
-        QScrollArea* scrollArea = new QScrollArea;
-        m_routingWidget->setMinimumWidth( 760 );
-        scrollArea->setWidget( m_routingWidget );
-
-        QAction *openAction = new QAction( tr( "Open Route..." ), this );
-        connect( openAction, SIGNAL(triggered()), m_routingWidget, SLOT(openRoute()) );
-        m_routingWindow->menuBar()->addAction( openAction );
-
-        QAction* saveAction = new QAction( tr( "Save Route..." ), this );
-        connect( saveAction, SIGNAL(triggered()), m_routingWidget, SLOT(saveRoute()) );
-        m_routingWindow->menuBar()->addAction( saveAction );
-
-        m_routingWindow->setCentralWidget( scrollArea );
-    }
-
-    m_routingWindow->show();
-    m_routingWindow->raise();
-    m_routingWindow->activateWindow();
-}
-
-void MainWindow::showTrackingDialog()
-{
-    initializeTrackingWidget();
-    m_trackingWindow->show();
-    m_trackingWindow->raise();
-    m_trackingWindow->activateWindow();
-}
-
-void MainWindow::initializeTrackingWidget()
-{
-    if( !m_trackingWindow ) {
-        m_trackingWindow = new StackableWindow( this );
-        m_trackingWindow->setWindowTitle( tr( "Tracking - Marble" ) );
-        CurrentLocationWidget *trackingWidget = new CurrentLocationWidget( m_trackingWindow );
-        trackingWidget->setMarbleWidget( m_controlView->marbleWidget() );
-
-        m_trackingWindow->setCentralWidget( trackingWidget );
-    }
-}
-
 void MainWindow::updateMapEditButtonVisibility( const QString &mapTheme )
 {
     Q_ASSERT( m_osmEditAction );
     m_osmEditAction->setVisible( mapTheme == "earth/openstreetmap/openstreetmap.dgml" );
-}
-
-void MainWindow::setupZoomButtons()
-{
-#ifdef Q_WS_MAEMO_5
-    if ( winId() ) {
-        Atom atom = XInternAtom( QX11Info::display(), "_HILDON_ZOOM_KEY_ATOM", False );
-        if ( atom ) {
-            unsigned long val = 1;
-            XChangeProperty ( QX11Info::display(), winId(), atom, XA_INTEGER, 32,
-                             PropModeReplace, reinterpret_cast<unsigned char *>( &val ), 1 );
-
-            QAction* zoomIn = new QAction( tr( "Zoom &In" ), this );
-            zoomIn->setShortcut( Qt::Key_F7 );
-            connect( zoomIn, SIGNAL(triggered()), m_controlView->marbleWidget(), SLOT(zoomIn()) );
-            addAction( zoomIn );
-
-            QAction* zoomOut = new QAction( tr( "Zoom &Out" ), this );
-            zoomOut->setShortcut( Qt::Key_F8 );
-            connect( zoomOut, SIGNAL(triggered()), m_controlView->marbleWidget(), SLOT(zoomOut()) );
-            addAction( zoomOut );
-        }
-    }
-#endif // Q_WS_MAEMO_5
 }
 
 void MainWindow::showMapWizard()
@@ -1573,19 +1399,6 @@ void MainWindow::showMapWizard()
     settings.endGroup();
 
     mapWizard->deleteLater();
-}
-
-void MainWindow::showGoToDialog()
-{
-    if ( !m_gotoDialog ) {
-        m_gotoDialog = new GoToDialog( m_controlView->marbleModel(), this );
-    }
-
-    m_gotoDialog->show();
-    if ( m_gotoDialog->exec() == QDialog::Accepted ) {
-        const GeoDataCoordinates coordinates = m_gotoDialog->coordinates();
-        m_controlView->marbleWidget()->centerOn( coordinates );
-    }
 }
 
 void MainWindow::showZoomLevel(bool show)

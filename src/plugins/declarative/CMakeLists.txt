@@ -28,12 +28,13 @@ RouteRequestModel.cpp
 Settings.cpp
 MapThemeModel.cpp
 ZoomButtonInterceptor.cpp
+CloudSync.cpp
 )
 
 marble_add_project_resources(qmldir)
+marble_qt4_automoc(${marbleplugin_SRCS})
 
 marble_add_declarative_plugin( MarbleDeclarativePlugin . ${marbleplugin_SRCS})
-qt4_automoc(${marbleplugin_SRCS})
 target_link_libraries( MarbleDeclarativePlugin ${QT_QTDECLARATIVE_LIBRARY} ${QT_QTWEBKIT_LIBRARY} )
 OPTION(BUILD_HARMATTAN_ZOOMINTERCEPTOR "Add support for intercepting volume keys for zooming")
 IF( BUILD_HARMATTAN_ZOOMINTERCEPTOR )

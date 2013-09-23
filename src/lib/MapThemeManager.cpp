@@ -18,6 +18,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QFileSystemWatcher>
+#include <QScopedPointer>
 #include <QString>
 #include <QStringList>
 #include <QTimer>
@@ -81,7 +82,7 @@ public:
     /**
      * @brief Helper method for updateMapThemeModel().
      */
-    QList<QStandardItem *> createMapThemeRow( const QString& mapThemeID );
+    static QList<QStandardItem *> createMapThemeRow( const QString& mapThemeID );
 
     /**
      * @brief Deletes any directory with its contents.
@@ -338,7 +339,7 @@ QList<QStandardItem *> MapThemeManager::Private::createMapThemeRow( QString cons
 {
     QList<QStandardItem *> itemList;
 
-    GeoSceneDocument *mapTheme = loadMapThemeFile( mapThemeID );
+    QScopedPointer<GeoSceneDocument> mapTheme( loadMapThemeFile( mapThemeID ) );
     if ( !mapTheme || !mapTheme->head()->visible() ) {
         return itemList;
     }
@@ -383,8 +384,6 @@ QList<QStandardItem *> MapThemeManager::Private::createMapThemeRow( QString cons
 
     itemList << item;
 
-    delete mapTheme;
-
     return itemList;
 }
 
@@ -407,8 +406,8 @@ void MapThemeManager::Private::updateMapThemeModel()
         }
     }
 
-    for ( int i = 0; i < m_mapThemeModel.rowCount(); ++i ) {
-        QString celestialBodyId = ( m_mapThemeModel.data( m_mapThemeModel.index( i, 0 ), Qt::UserRole + 1 ).toString() ).section( '/', 0, 0 );
+    foreach ( const QString &mapThemeId, stringlist ) {
+        QString celestialBodyId = mapThemeId.section( '/', 0, 0 );
         QString celestialBodyName = Planet::name( celestialBodyId );
 
         QList<QStandardItem*> matchingItems = m_celestialList.findItems( celestialBodyId, Qt::MatchExactly, 1 );

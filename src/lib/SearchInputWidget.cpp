@@ -66,7 +66,7 @@ void SearchInputWidget::centerOnSearchSuggestion(const QModelIndex &index )
 {
     QAbstractItemModel const * model = completer()->completionModel();
     QVariant const value = model->data( index, MarblePlacemarkModel::CoordinateRole );
-    GeoDataCoordinates const coordinates = qVariantValue<GeoDataCoordinates>( value );
+    GeoDataCoordinates const coordinates = value.value<GeoDataCoordinates>();
     emit centerOn( coordinates );
 }
 
@@ -96,9 +96,7 @@ void SearchInputWidget::setAreaSearch()
 
 void SearchInputWidget::updatePlaceholderText()
 {
-#if QT_VERSION >= 0x40700
     setPlaceholderText( m_areaSearch ? tr( "Area Search" ) : tr ( "Global Search" ) );
-#endif
 }
 
 }

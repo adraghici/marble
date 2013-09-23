@@ -20,6 +20,7 @@ INCLUDE_DIRECTORIES(
  ${CMAKE_CURRENT_SOURCE_DIR}/geodata/parser
  ${CMAKE_CURRENT_SOURCE_DIR}/graphicsview
  ${CMAKE_CURRENT_SOURCE_DIR}/layers
+ ${CMAKE_CURRENT_SOURCE_DIR}/cloudsync
  ${QT_INCLUDE_DIR}
 )
 INCLUDE(${QT_USE_FILE})
@@ -111,7 +112,7 @@ set(marblewidget_SRCS
     ViewportParams.cpp
     ViewParams.cpp
     projections/AbstractProjection.cpp
-	projections/CylindricalProjection.cpp
+    projections/CylindricalProjection.cpp
     projections/SphericalProjection.cpp
     projections/EquirectProjection.cpp
     projections/MercatorProjection.cpp
@@ -200,7 +201,10 @@ set(marblewidget_SRCS
     routing/instructions/RoutingWaypoint.cpp
     routing/instructions/WaypointParser.cpp
 
-    MarbleRunnerManager.cpp
+    ParsingRunnerManager.cpp
+    ReverseGeocodingRunnerManager.cpp
+    RoutingRunnerManager.cpp
+    SearchRunnerManager.cpp
 
     AutoNavigation.cpp
 
@@ -232,6 +236,15 @@ set(marblewidget_SRCS
     SearchWidget.cpp
     kineticmodel.cpp
     NewstuffModel.cpp
+    
+    cloudsync/CloudSyncManager.cpp
+    cloudsync/RouteSyncManager.cpp
+    cloudsync/AbstractSyncBackend.cpp
+    cloudsync/OwncloudSyncBackend.cpp
+    cloudsync/CloudRouteModel.cpp
+    cloudsync/CloudRoutesDialog.cpp
+    cloudsync/RouteItem.cpp
+    cloudsync/RouteItemDelegate.cpp
 )
 
 set (marblewidget_UI
@@ -266,13 +279,15 @@ set (marblewidget_UI
     MapWizard.ui
     MapThemeDownloadDialog.ui
     WebPopupWidget.ui
+    cloudsync/CloudRoutesDialog.ui
+    MarbleCloudSyncSettingsWidget.ui
 )
 
 # FIXME: cleaner approach of src/lib/MarbleControlBox.* vs. marble.qrc
 qt4_add_resources(marblewidget_SRCS libmarble.qrc ../marble.qrc)
 
 qt4_wrap_ui(marblewidget_SRCS ${marblewidget_UI})
-qt4_automoc(${marblewidget_SRCS})
+marble_qt4_automoc(${marblewidget_SRCS})
 
 
 # link with release version of Qt libs
@@ -359,10 +374,6 @@ else (APPLE AND QTONLY)
     TileCreatorDialog.h
     ViewportParams.h
     projections/AbstractProjection.h
-	projections/CylindricalProjection.h
-    projections/SphericalProjection.h
-    projections/EquirectProjection.h
-    projections/MercatorProjection.h
     PositionTracking.h
     Quaternion.h
     SunLocator.h
@@ -419,7 +430,10 @@ else (APPLE AND QTONLY)
     PositionProviderPluginInterface.h
     RenderPlugin.h
     RenderPluginInterface.h
-    MarbleRunnerManager.h
+    ParsingRunnerManager.h
+    ReverseGeocodingRunnerManager.h
+    RoutingRunnerManager.h
+    SearchRunnerManager.h
     ParsingRunner.h
     SearchRunner.h
     ReverseGeocodingRunner.h

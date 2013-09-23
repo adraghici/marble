@@ -96,7 +96,6 @@
     <choice name="AngleUnit::DMSDegree"/>
     <choice name="AngleUnit::DecimalDegree"/>
     <choice name="AngleUnit::UTM"/>
-    <choice name="AngleUnit::MGRS"/>
    </choices>
    <default>Marble::DMSDegree</default>
   </entry>
@@ -295,6 +294,29 @@
   </entry>
   <entry key="routeAlphaAlternative" type="Int" >
    <default>200</default>
+  </entry>
+ </group>
+ <group name="CloudSync">
+  <entry key="enableSync" type="Bool" >
+   <default>false</default>
+  </entry>
+  <entry name="syncBackend" type="String">
+   <default>owncloud</default>
+  </entry>
+  <entry key="syncBookmarks" type="Bool" >
+   <default>true</default>
+  </entry>
+  <entry key="syncRoutes" type="Bool" >
+   <default>true</default>
+  </entry>
+  <entry name="owncloudServer" type="String">
+   <default></default>
+  </entry>
+  <entry name="owncloudUsername" type="String">
+   <default></default>
+  </entry>
+  <entry name="owncloudPassword" type="String">
+   <default></default>
   </entry>
  </group>
 </kcfg>

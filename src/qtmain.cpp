@@ -52,22 +52,7 @@ int main(int argc, char *argv[])
     app.setOrganizationDomain( "kde.org" );
     // Widget translation
 
-#ifdef Q_WS_MAEMO_5
-    // Work around http://bugreports.qt.nokia.com/browse/QTBUG-1313
-    QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
-    QString lang( "C" );
-    QStringList const locales = QStringList() << "LC_ALL" << "LC_MESSAGES" << "LANG" << "LANGUAGE";
-    foreach( const QString &locale, locales ) {
-        if ( env.contains( locale ) && !env.value( locale ).isEmpty() ) {
-            lang = env.value( locale, "C" );
-            break;
-        }
-    }
-
-    lang = lang.section( '_', 0, 0 );
-#else
     QString      lang = QLocale::system().name().section('_', 0, 0);
-#endif
     QTranslator  translator;
     translator.load( "marble-" + lang, MarbleDirs::path(QString("lang") ) );
     app.installTranslator(&translator);
@@ -130,9 +115,7 @@ int main(int argc, char *argv[])
         qWarning() << "  --timedemo ................. Measure the paint performance while moving the map and quit";
         qWarning();
         qWarning() << "profile options (note that marble should automatically detect which profile to use. Override that with the options below):";
-        qWarning() << "  --smallscreen .............. Enforce the profile for devices with small screens (e.g. smartphones)";
         qWarning() << "  --highresolution ........... Enforce the profile for devices with high resolution (e.g. desktop computers)";
-        qWarning() << "  --nosmallscreen ............ Deactivate the profile for devices with small screens (e.g. smartphones)";
         qWarning() << "  --nohighresolution ......... Deactivate the profile for devices with high resolution (e.g. desktop computers)";
 
         return 0;
@@ -153,12 +136,6 @@ int main(int argc, char *argv[])
             dataPathIndex = i + 1;
             marbleDataPath = args.value( dataPathIndex );
             ++i;
-        }
-        else if ( arg == QLatin1String( "--smallscreen" ) ) {
-            profiles |= MarbleGlobal::SmallScreen;
-        }
-        else if ( arg == QLatin1String( "--nosmallscreen" ) ) {
-            profiles &= ~MarbleGlobal::SmallScreen;
         }
         else if ( arg == QLatin1String( "--highresolution" ) ) {
             profiles |= MarbleGlobal::HighResolution;
@@ -251,7 +228,7 @@ int main(int argc, char *argv[])
             window->marbleControl()->marbleWidget()->setShowRuntimeTrace( true );
         }
         else if ( i != dataPathIndex && QFile::exists( arg ) )
-            ( window->marbleControl() )->addGeoDataFile( arg );
+            window->addGeoDataFile( arg );
     }
 
     return app.exec();

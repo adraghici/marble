@@ -22,6 +22,7 @@
 #include <QMetaObject>
 #include <QMetaProperty>
 #include <QScriptValue>
+#include <QScriptValueIterator>
 
 using namespace Marble;
 
@@ -73,7 +74,7 @@ void DeclarativeDataPluginPrivate::parseChunk( DeclarativeDataPluginItem *item, 
     } else if( key == "alt" || key == "altitude" ) {
         coordinates.setAltitude( value.toDouble() );
     } else {
-        item->setProperty( key.toAscii(), value );
+        item->setProperty( key.toLatin1(), value );
     }
 }
 
@@ -354,7 +355,7 @@ void DeclarativeDataPlugin::setDeclarativeModel( const QVariant &model )
     d->m_model = model;
     d->m_items.clear();
 
-    QObject* object = qVariantValue<QObject*>( model );
+    QObject* object = model.value<QObject*>();
     if( qobject_cast< QAbstractListModel* >( object ) ) {
         d->parseListModel( qobject_cast< QAbstractListModel *>( object ) );
     } else {

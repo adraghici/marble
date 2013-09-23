@@ -39,16 +39,16 @@ public:
 public:
     explicit MapThemeModel( QObject* parent = 0 );
 
-    /** @todo FIXME https://bugreports.qt.nokia.com/browse/QTCOMPONENTS-1206 */
-    int count();
+    /** @todo FIXME https://bugreports.qt-project.org/browse/QTCOMPONENTS-1206 */
+    int count() const;
+
+    Q_INVOKABLE QString name( const QString &id ) const;
+
+    Q_INVOKABLE int indexOf( const QString &id ) const;
+
+    Q_INVOKABLE MapThemeFilters mapThemeFilter() const;
 
 public Q_SLOTS:
-    QString name( const QString &id );
-
-    int indexOf( const QString &id );
-
-    MapThemeFilters mapThemeFilter() const;
-
     void setMapThemeFilter( MapThemeFilters filters );
 
 Q_SIGNALS:

@@ -57,6 +57,12 @@ public Q_SLOTS:
     /** Ask the user for a kml file to save the current route to */
     void saveRoute();
 
+    /** Upload route to the cloud */
+    void uploadToCloud();
+
+    /** Open cloud routes dialog */
+    void openCloudRoutesDialog();
+
     /** Add another input field at the end */
     void addInputWidget();
 
@@ -106,9 +112,6 @@ private Q_SLOTS:
     /** Progress animation update */
     void updateProgress();
 
-    /** Switch to an alternative route */
-    void switchRoute( int index );
-
     /** Toggle visibility of alternative routes */
     void updateAlternativeRoutes();
 
@@ -126,6 +129,9 @@ private Q_SLOTS:
 
     /** Change selected routing profile to the one set in the shared request */
     void updateActiveRoutingProfile();
+
+    /** Toggle cloud sync button visibility based on whether route sync is enabled */
+    void updateCloudSyncButtons();
 
 protected:
     bool eventFilter( QObject *o, QEvent *e );

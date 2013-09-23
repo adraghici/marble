@@ -37,6 +37,7 @@ if( QT_QTDECLARATIVE_FOUND )
   ENDIF()
 ENDIF()
 
+add_subdirectory( marble-mobile )
 add_subdirectory( routing-instructions )
 add_subdirectory( lib )
 add_subdirectory( plugins )
@@ -107,8 +108,8 @@ else (QTONLY)
 
 endif (QTONLY)
 
-set(marble_SRCS ControlView.cpp MarbleTest.cpp qtmain.cpp QtMainWindow.cpp StackableWindow.cpp)
-set(marble_HDRS ControlView.h MarbleTest.h QtMainWindow.h StackableWindow.h)
+set(marble_SRCS ControlView.cpp MarbleTest.cpp qtmain.cpp QtMainWindow.cpp)
+set(marble_HDRS ControlView.h MarbleTest.h QtMainWindow.h)
 
 if (NOT QTONLY)
   set(marble_kde_SRCS ControlView.cpp MarbleTest.cpp kdemain.cpp KdeMainWindow.cpp marble_part.cpp)
@@ -134,7 +135,7 @@ endif(MINGW)
 qt4_add_resources(marble_SRCS marble.qrc)
 
 qt4_wrap_ui(marble_SRCS ${marble_UI})
-qt4_automoc(${marble_SRCS})
+marble_qt4_automoc(${marble_SRCS})
 
 if (NOT QTONLY)
   kde4_add_ui_files(marble_kde_SRCS ${marble_UI})
