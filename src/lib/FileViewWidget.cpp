@@ -13,6 +13,7 @@
 
 // Qt
 #include <QSortFilterProxyModel>
+#include <QFileDialog>
 
 // Marble
 #include "GeoDataContainer.h"
@@ -114,7 +115,7 @@ void FileViewWidgetPrivate::saveFile()
         = qVariantValue<GeoDataObject*>( index.model()->data( index, MarblePlacemarkModel::ObjectPointerRole ) );
     GeoDataDocument *document = dynamic_cast<GeoDataDocument*>(object);
     if ( document ) {
-        m_fileManager->saveFile( document );
+        m_fileManager->saveFile( QFileDialog::getSaveFileName( q, "Save To" ), document );
     }
 }
 
