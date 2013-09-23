@@ -19,9 +19,14 @@
 
 #include "RenderPlugin.h"
 #include "SceneGraphicsItem.h"
+#include "GeoDataLatLonBox.h"
+#include "GeoDataGroundOverlay.h"
+#include "GroundOverlayFrame.h"
 
 #include <QObject>
 #include <QErrorMessage>
+#include <QMenu>
+#include <QSortFilterProxyModel>
 
 class QNetworkAccessManager;
 class QNetworkReply;
@@ -111,20 +116,33 @@ protected:
     bool eventFilter(QObject* watched, QEvent* event);
 private:
     void setupActions(MarbleWidget* m);
+    void setupGroundOverlayModel();
+    void setupOverlayRmbMenu();
     //    void readOsmFile( QIODevice* device, bool flyToFile );
+
+    void showOverlayRmbMenu( GeoDataGroundOverlay *overlay, qreal x, qreal y );
+
+    void displayOverlayEditDialog( GeoDataGroundOverlay *overlay );
+    void displayOverlayFrame( GeoDataGroundOverlay *overlay );
+    void clearOverlayFrames();
 
     bool    m_widgetInitialized;
     MarbleWidget* m_marbleWidget;
 
+    QMenu*                  m_overlayRmbMenu;
     QList<QActionGroup*>    m_actions;
     QList<QActionGroup*>    m_toolbarActions;
 
     GeoDataDocument *m_annotationDocument;
     QList<SceneGraphicsItem*> m_graphicsItems;
+    QSortFilterProxyModel m_groundOverlayModel;
+    QMap<GeoDataGroundOverlay*, SceneGraphicsItem*> m_groundOverlayFrames;
 
     //used while creating new polygons
     GeoDataPlacemark* m_polygon_placemark;
     SceneGraphicsItem *m_selectedItem;
+
+    GeoDataGroundOverlay *m_rmbOverlay;
 
     bool m_addingPlacemark;
     bool m_drawingPolygon;
@@ -133,6 +151,11 @@ private:
     //    QNetworkAccessManager* m_networkAccessManager;
     //    QErrorMessage m_errorMessage;
     bool m_isInitialized;
+
+private slots:
+    void editOverlay();
+    void removeOverlay();
+    void updateOverlayFrame( GeoDataGroundOverlay* overlay );
 };
 
 }

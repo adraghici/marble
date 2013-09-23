@@ -11,8 +11,6 @@
 #include "EditGroundOverlayDialog.h"
 #include "ui_EditGroundOverlayDialog.h"
 
-#include <QDebug>
-
 namespace Marble
 {
 
@@ -38,21 +36,6 @@ EditGroundOverlayDialog::Private::~Private()
 {
 }
 
-void EditGroundOverlayDialog::updateGroundOverlay()
-{
-    d->m_overlay->setName( d->m_name->text() );
-    d->m_overlay->setIconFile( d->m_link->text() );
-    d->m_overlay->setDescription( d->m_description->toPlainText() );
-
-    d->m_overlay->latLonBox().setBoundaries( d->m_north->value(),
-                                             d->m_south->value(),
-                                             d->m_east->value(),
-                                             d->m_west->value(),
-                                             GeoDataCoordinates::Degree );
-
-    d->m_overlay->latLonBox().setRotation( d->m_rotation->value(), GeoDataCoordinates::Degree );
-}
-
 EditGroundOverlayDialog::EditGroundOverlayDialog( GeoDataGroundOverlay *overlay, TextureLayer *textureLayer, QWidget *parent ) :
     QDialog( parent ), d( new Private( overlay, textureLayer ) )
 {
@@ -76,12 +59,34 @@ EditGroundOverlayDialog::EditGroundOverlayDialog( GeoDataGroundOverlay *overlay,
     d->m_rotation->setValue( latLonBox.rotation( GeoDataCoordinates::Degree ) );
 
     connect( d->buttonBox, SIGNAL(accepted()), this, SLOT(updateGroundOverlay()) );
+    connect( d->buttonBox, SIGNAL(accepted()), this, SLOT(setGroundOverlayUpdated()) );
     connect( d->buttonBox, SIGNAL(accepted()), d->m_textureLayer, SLOT(reset()) );
 }
 
 EditGroundOverlayDialog::~EditGroundOverlayDialog()
 {
     delete d;
+}
+
+
+void EditGroundOverlayDialog::updateGroundOverlay()
+{
+    d->m_overlay->setName( d->m_name->text() );
+    d->m_overlay->setIconFile( d->m_link->text() );
+    d->m_overlay->setDescription( d->m_description->toPlainText() );
+
+    d->m_overlay->latLonBox().setBoundaries( d->m_north->value(),
+                                             d->m_south->value(),
+                                             d->m_east->value(),
+                                             d->m_west->value(),
+                                             GeoDataCoordinates::Degree  );
+
+    d->m_overlay->latLonBox().setRotation( d->m_rotation->value(), GeoDataCoordinates::Degree );
+}
+
+void EditGroundOverlayDialog::setGroundOverlayUpdated()
+{
+    emit groundOverlayUpdated( d->m_overlay );
 }
 
 }

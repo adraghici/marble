@@ -33,6 +33,10 @@ private:
 
 private slots:
     void updateGroundOverlay();
+    void setGroundOverlayUpdated();
+
+signals:
+    void groundOverlayUpdated( GeoDataGroundOverlay* );
 };
 
 }

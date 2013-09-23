@@ -15,6 +15,7 @@ set( annotate_SRCS
   EditGroundOverlayDialog.cpp
   EditGroundOverlayDialog.ui
   GeoWidgetBubble.cpp
+  GroundOverlayFrame.cpp
   PlacemarkTextAnnotation.cpp
   SceneGraphicsItem.cpp
   TextEditor.cpp

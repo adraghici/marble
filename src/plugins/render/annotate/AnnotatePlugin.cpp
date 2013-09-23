@@ -30,6 +30,7 @@
 #include "MarbleModel.h"
 #include "MarblePlacemarkModel.h"
 #include "MarbleWidget.h"
+#include "MarbleWidgetInputHandler.h"
 #include "PlacemarkTextAnnotation.h"
 #include "TextureLayer.h"
 
@@ -39,7 +40,6 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QMessageBox>
-#include <QSortFilterProxyModel>
 
 namespace Marble
 {
@@ -48,6 +48,7 @@ AnnotatePlugin::AnnotatePlugin( const MarbleModel *model )
     : RenderPlugin(model),
       m_widgetInitialized( false ),
       m_marbleWidget( 0 ),
+      m_overlayRmbMenu( new QMenu( m_marbleWidget ) ),
       m_annotationDocument( new GeoDataDocument ),
       m_polygon_placemark( 0 ),
       m_selectedItem( 0 ),
@@ -252,7 +253,7 @@ void AnnotatePlugin::addOverlay()
     }
 
     GeoDataGroundOverlay *overlay = new GeoDataGroundOverlay();
-    EditGroundOverlayDialog *dialog = new EditGroundOverlayDialog( overlay, m_marbleWidget->textureLayer() );
+    EditGroundOverlayDialog *dialog = new EditGroundOverlayDialog( overlay, m_marbleWidget->textureLayer(), m_marbleWidget );
     dialog->exec();
 
     m_marbleWidget->model()->treeModel()->addFeature( m_annotationDocument, overlay );
@@ -422,6 +423,8 @@ bool AnnotatePlugin::eventFilter(QObject* watched, QEvent* event)
         if( marbleWidget ) {
             m_marbleWidget = marbleWidget;
             setupActions( marbleWidget );
+            setupGroundOverlayModel();
+            setupOverlayRmbMenu();
             m_marbleWidget->model()->treeModel()->addDocument( m_annotationDocument );
             m_widgetInitialized = true;
         }
@@ -453,23 +456,22 @@ bool AnnotatePlugin::eventFilter(QObject* watched, QEvent* event)
         return false;
     }
 
-    QSortFilterProxyModel groundOverlayModel;
-    groundOverlayModel.setSourceModel( m_marbleWidget->model()->groundOverlayModel() );
-    groundOverlayModel.setDynamicSortFilter( true );
-    groundOverlayModel.setSortRole( MarblePlacemarkModel::PopularityIndexRole );
-    groundOverlayModel.sort( 0, Qt::AscendingOrder );
-
-    if ( mouseEvent->button() == Qt::LeftButton && event->type() == QEvent::MouseButtonRelease ) {
-        for ( int i = 0; i < groundOverlayModel.rowCount(); ++i ) {
-            QModelIndex index = groundOverlayModel.index( i, 0 );
+    if ( event->type() == QEvent::MouseButtonRelease ) {
+        for ( int i = 0; i < m_groundOverlayModel.rowCount(); ++i ) {
+            QModelIndex index = m_groundOverlayModel.index( i, 0 );
             GeoDataGroundOverlay *overlay = dynamic_cast<GeoDataGroundOverlay*>( qvariant_cast<GeoDataObject*>( index.data( MarblePlacemarkModel::ObjectPointerRole ) ) );
+
             if ( overlay->latLonBox().contains( GeoDataCoordinates( lon, lat ) ) ) {
-                if ( m_removingItem ) {
-                    m_marbleWidget->model()->treeModel()->removeFeature( overlay );
+                if ( mouseEvent->button() == Qt::LeftButton ) {
+                    if ( m_removingItem ) {
+                        m_marbleWidget->model()->treeModel()->removeFeature( overlay );
+                    }
+                    else {
+                        displayOverlayFrame( overlay );
+                    }
                 }
-                else {
-                    EditGroundOverlayDialog *dialog = new EditGroundOverlayDialog( overlay, m_marbleWidget->textureLayer() );
-                    dialog->exec();
+                if ( mouseEvent->button() == Qt::RightButton ) {
+                    showOverlayRmbMenu( overlay, mouseEvent->x(), mouseEvent->y() );
                 }
             }
         }
@@ -512,6 +514,9 @@ bool AnnotatePlugin::eventFilter(QObject* watched, QEvent* event)
                     if( item->sceneEvent( event ) ) {
                         if( event->type() == QEvent::MouseButtonPress ) {
                             m_selectedItem = item;
+                            if ( !m_groundOverlayFrames.values().contains( item ) ) {
+                                clearOverlayFrames();
+                            }
                         } else {
                             m_selectedItem = 0;
                         }
@@ -523,6 +528,9 @@ bool AnnotatePlugin::eventFilter(QObject* watched, QEvent* event)
         }
     }
 
+    if ( event->type() != QEvent::MouseMove && event->type() != QEvent::MouseButtonRelease ) {
+        clearOverlayFrames();
+    }
     //FIXME: finish cleaning this up
 
     GeoDataCoordinates const coordinates( lon, lat );
@@ -665,9 +673,98 @@ void AnnotatePlugin::setupActions(MarbleWidget* widget)
     emit actionGroupsChanged();
 }
 
+void AnnotatePlugin::setupGroundOverlayModel()
+{
+    m_groundOverlayModel.setSourceModel( m_marbleWidget->model()->groundOverlayModel() );
+    m_groundOverlayModel.setDynamicSortFilter( true );
+    m_groundOverlayModel.setSortRole( MarblePlacemarkModel::PopularityIndexRole );
+    m_groundOverlayModel.sort( 0, Qt::AscendingOrder );
+}
+
+void AnnotatePlugin::setupOverlayRmbMenu()
+{
+    QAction *m_removeOverlay = new QAction( tr( "Remove Ground Overlay" ), m_overlayRmbMenu );
+    QAction *m_editOverlay = new QAction( tr( "Edit Ground Overlay" ), m_overlayRmbMenu );
+
+    m_overlayRmbMenu->addAction( m_editOverlay );
+    m_overlayRmbMenu->addAction( m_removeOverlay );
+
+    connect( m_editOverlay, SIGNAL(triggered()), this, SLOT(editOverlay()) );
+    connect( m_removeOverlay, SIGNAL(triggered()), this, SLOT(removeOverlay()) );
+}
+
 //void AnnotatePlugin::readOsmFile( QIODevice *device, bool flyToFile )
 //{
 //}
+
+void AnnotatePlugin::showOverlayRmbMenu( GeoDataGroundOverlay *overlay, qreal x, qreal y )
+{
+    m_rmbOverlay = overlay;
+    m_overlayRmbMenu->popup( m_marbleWidget->mapToGlobal( QPoint( x, y ) ) );
+}
+
+void AnnotatePlugin::displayOverlayEditDialog( GeoDataGroundOverlay *overlay )
+{
+
+    EditGroundOverlayDialog *dialog = new EditGroundOverlayDialog( overlay, m_marbleWidget->textureLayer() );
+
+    connect( dialog, SIGNAL(groundOverlayUpdated(GeoDataGroundOverlay*)), this, SLOT(updateOverlayFrame(GeoDataGroundOverlay*)) );
+
+    dialog->exec();
+}
+
+void AnnotatePlugin::displayOverlayFrame( GeoDataGroundOverlay *overlay )
+{
+    if ( !m_groundOverlayFrames.keys().contains( overlay ) ) {
+
+        GeoDataPlacemark *rectangle_placemark = new GeoDataPlacemark;
+        rectangle_placemark->setGeometry( new GeoDataPolygon );
+        rectangle_placemark->setParent( m_annotationDocument );
+        rectangle_placemark->setStyleUrl( "#polygon" );
+
+        GroundOverlayFrame *frame = new GroundOverlayFrame( rectangle_placemark, overlay, m_marbleWidget->textureLayer() );
+        m_graphicsItems.append( frame );
+
+        m_groundOverlayFrames.insert( overlay, frame );
+
+        displayOverlayEditDialog( overlay );
+    }
+}
+
+void AnnotatePlugin::updateOverlayFrame( GeoDataGroundOverlay *overlay )
+{
+    GroundOverlayFrame *frame = static_cast<GroundOverlayFrame *>( m_groundOverlayFrames.value( overlay ) );
+    if ( frame ) {
+        frame->update();
+    }
+
+}
+
+void AnnotatePlugin::clearOverlayFrames()
+{
+
+    foreach ( GeoDataGroundOverlay *overlay, m_groundOverlayFrames.keys() ) {
+        GroundOverlayFrame *frame = static_cast<GroundOverlayFrame *>( m_groundOverlayFrames.value( overlay ) );
+        m_graphicsItems.removeAll( m_groundOverlayFrames.value( overlay ) );
+        m_marbleWidget->model()->treeModel()->removeFeature( frame->placemark() );
+        delete frame->placemark();
+        delete frame;
+    }
+
+    m_groundOverlayFrames.clear();
+}
+
+void AnnotatePlugin::editOverlay()
+{
+    displayOverlayFrame( m_rmbOverlay );
+    displayOverlayEditDialog( m_rmbOverlay );
+}
+
+void AnnotatePlugin::removeOverlay()
+{
+    m_marbleWidget->model()->treeModel()->removeFeature( m_rmbOverlay );
+    clearOverlayFrames();
+}
 
 }
 
